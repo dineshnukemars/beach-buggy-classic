@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Scene editor</title>
+    <style>
+      html, body { margin: 0; height: 100%; display: flex; font-family: sans-serif; background: #0e141c; color: #eee; }
+      #pane { width: 380px; display: flex; flex-direction: column; padding: 8px; gap: 8px; }
+      textarea { flex: 1; font: 12px ui-monospace, monospace; background: #111; color: #ddd; }
+      canvas { flex: 1; }
+      button { padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="pane">
+      <strong>SceneDocument JSON</strong>
+      <textarea id="json"></textarea>
+      <button id="apply" type="button">Apply</button>
+      <button id="download" type="button">Download JSON</button>
+      <input id="load" type="file" accept="application/json" />
+    </div>
+    <canvas id="c"></canvas>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

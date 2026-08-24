@@ -1,0 +1,20 @@
+{
+  "name": "@studio/physics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --import tsx --test src/world.test.ts"
+  },
+  "dependencies": {
+    "@studio/core": "0.1.0",
+    "three": "^0.178.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.178.0",
+    "tsx": "^4.20.3"
+  }
+}

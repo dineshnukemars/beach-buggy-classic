@@ -4,3 +4,8 @@ dist
 *.local
 .env
 .env.*
+games/*/public/assets/_ci/
+games/*/public/scenes/pipeline.json
+tools/pipeline-smoke/.tmp/
+test-results/
+playwright-report/

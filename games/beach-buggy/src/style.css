@@ -2,33 +2,21 @@
   color-scheme: dark;
   --sand: #e8c98a;
   --ocean: #1a6b8a;
-  --sky-top: #6ec6ff;
-  --sky-bot: #c8e8ff;
   --accent: #ff6b2c;
   --panel: rgba(12, 28, 40, 0.72);
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-html,
-body,
-#app {
+html, body, #app {
   width: 100%;
   height: 100%;
   overflow: hidden;
   background: #0a1620;
 }
 
-#game {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
+#game { display: block; width: 100%; height: 100%; }
 
 #hud {
   position: absolute;
@@ -41,17 +29,12 @@ body,
 #hud-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
   padding: 1rem 1.25rem;
   font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
 }
 
-#place {
-  color: var(--accent);
-  font-size: 1.75rem;
-}
+#place { color: var(--accent); font-size: 1.75rem; }
 
 #countdown {
   position: absolute;
@@ -60,7 +43,6 @@ body,
   transform: translate(-50%, -50%);
   font-size: 5rem;
   font-weight: 800;
-  color: #fff;
 }
 
 #message {
@@ -100,9 +82,7 @@ body,
   pointer-events: auto;
 }
 
-#overlay.hidden {
-  display: none;
-}
+#overlay.hidden { display: none; }
 
 #overlay h1 {
   font-size: clamp(2rem, 6vw, 3.5rem);
@@ -112,15 +92,8 @@ body,
   color: #ffe6b0;
 }
 
-#overlay p {
-  max-width: 28rem;
-  opacity: 0.9;
-  font-size: 1.1rem;
-}
-
 #start-btn {
   margin-top: 0.75rem;
-  pointer-events: auto;
   border: none;
   border-radius: 999px;
   padding: 0.85rem 1.75rem;
@@ -129,9 +102,4 @@ body,
   cursor: pointer;
   color: #1a1208;
   background: linear-gradient(180deg, #ffd36a, var(--accent));
-  box-shadow: 0 8px 24px rgba(255, 107, 44, 0.35);
-}
-
-#start-btn:hover {
-  filter: brightness(1.06);
 }
