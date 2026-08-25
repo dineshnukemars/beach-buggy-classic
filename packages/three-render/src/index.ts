@@ -1,4 +1,3 @@
-import type { SceneDocument } from '@studio/core'
 import type { VehicleState } from '@studio/physics'
 import * as THREE from 'three'
 
@@ -8,6 +7,7 @@ export type Pose = {
   z: number
   heading: number
   speed: number
+  rotation: THREE.Quaternion
 }
 
 export function poseFromVehicle(state: VehicleState): Pose {
@@ -17,15 +17,13 @@ export function poseFromVehicle(state: VehicleState): Pose {
     z: state.position.z,
     heading: state.heading,
     speed: state.speed,
+    rotation: state.rotation.clone(),
   }
 }
 
 export function applyPose(object: THREE.Object3D, pose: Pose): void {
   object.position.set(pose.x, pose.y, pose.z)
-  object.rotation.order = 'YXZ'
-  object.rotation.y = pose.heading
-  object.rotation.x = -pose.speed * 0.002
-  object.rotation.z = 0
+  object.quaternion.copy(pose.rotation)
 }
 
 export function applyVehicle(object: THREE.Object3D, state: VehicleState): void {
@@ -43,7 +41,7 @@ export function entityPlaceholder(color = 0x88aacc): THREE.Mesh {
 
 export function placeEntities(
   scene: THREE.Scene,
-  doc: SceneDocument,
+  doc: import('@studio/core').SceneDocument,
   meshes: Map<string, THREE.Object3D>,
 ): void {
   for (const entity of doc.entities) {

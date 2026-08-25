@@ -10,6 +10,10 @@ export function createDefaultBeachScene(): SceneDocument {
   }
 }
 
+export * from './init'
+export * from './tuning'
+export * from './trackGeometry'
+export { FIXED_TIMESTEP } from './rapierSim'
 export * from './track'
 export * from './vehicle'
 export * from './world'

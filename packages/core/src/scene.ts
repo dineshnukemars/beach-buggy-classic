@@ -4,6 +4,12 @@ export type TrackSpec = {
   halfWidth: number
   centerline: Vec3Tuple[]
   boostPads: number[]
+  checkpoints?: number[]
+}
+
+export type EntityCollider = {
+  type: 'box'
+  halfExtents: Vec3Tuple
 }
 
 export type SceneEntity = {
@@ -12,6 +18,7 @@ export type SceneEntity = {
   position: Vec3Tuple
   rotationY: number
   scale: number
+  collider?: EntityCollider
 }
 
 export type SceneDocument = {

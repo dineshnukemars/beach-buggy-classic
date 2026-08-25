@@ -1,5 +1,5 @@
 import type { TrackSample } from '@studio/physics'
-import { DEFAULT_HALF_WIDTH } from '@studio/physics'
+import { buildTrackRibbon, DEFAULT_HALF_WIDTH, ribbonToThreeGeometry } from '@studio/physics'
 import * as THREE from 'three'
 
 export function createBuggyMesh(color: number): THREE.Group {
@@ -39,39 +39,19 @@ export function createBuggyMesh(color: number): THREE.Group {
   return buggy
 }
 
-export function createTrackMesh(samples: TrackSample[], halfWidth = DEFAULT_HALF_WIDTH): THREE.Group {
+export function createTrackMesh(
+  samples: TrackSample[],
+  totalLength: number,
+  halfWidth = DEFAULT_HALF_WIDTH,
+  boostPads: number[] = [0, 0.25, 0.5, 0.75],
+): THREE.Group {
   const group = new THREE.Group()
-  const positions: number[] = []
-  const uvs: number[] = []
-  const indices: number[] = []
-  for (let i = 0; i < samples.length; i++) {
-    const s = samples[i]
-    const left = s.position.clone().add(s.binormal.clone().multiplyScalar(halfWidth))
-    const right = s.position.clone().add(s.binormal.clone().multiplyScalar(-halfWidth))
-    left.y += 0.02
-    right.y += 0.02
-    positions.push(left.x, left.y, left.z, right.x, right.y, right.z)
-    const u = i / samples.length
-    uvs.push(0, u * 40, 1, u * 40)
-  }
-  for (let i = 0; i < samples.length; i++) {
-    const i0 = i * 2
-    const i1 = i0 + 1
-    const i2 = ((i + 1) % samples.length) * 2
-    const i3 = i2 + 1
-    indices.push(i0, i2, i1, i1, i2, i3)
-  }
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
-  geo.setIndex(indices)
-  geo.computeVertexNormals()
+  const ribbon = buildTrackRibbon(samples, totalLength, halfWidth, boostPads)
   const road = new THREE.Mesh(
-    geo,
+    ribbonToThreeGeometry(ribbon),
     new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.9 }),
   )
   road.receiveShadow = true
-  road.position.y = 0.05
   group.add(road)
 
   const lineMat = new THREE.MeshStandardMaterial({ color: 0xfff3c4, roughness: 0.8 })
@@ -83,33 +63,17 @@ export function createTrackMesh(samples: TrackSample[], halfWidth = DEFAULT_HALF
     group.add(dash)
   }
 
-  const leftPts: THREE.Vector3[] = []
-  const rightPts: THREE.Vector3[] = []
-  for (const s of samples) {
-    leftPts.push(s.position.clone().add(s.binormal.clone().multiplyScalar(halfWidth + 0.3)).setY(s.position.y + 0.45))
-    rightPts.push(s.position.clone().add(s.binormal.clone().multiplyScalar(-(halfWidth + 0.3))).setY(s.position.y + 0.45))
-  }
-  leftPts.push(leftPts[0].clone())
-  rightPts.push(rightPts[0].clone())
-  const railMat = new THREE.MeshStandardMaterial({ color: 0xf5f7fa, roughness: 0.35 })
-  for (const pts of [leftPts, rightPts]) {
-    const curve = new THREE.CatmullRomCurve3(pts, true)
-    group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, samples.length, 0.22, 6, true), railMat))
-  }
-
   const boostMat = new THREE.MeshStandardMaterial({
     color: 0x33ddff,
     emissive: 0x1188aa,
     emissiveIntensity: 0.6,
   })
-  for (let k = 0; k < 4; k++) {
-    const idx = Math.floor((k / 4) * samples.length)
-    const s = samples[idx]
-    const pad = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.08, 3.2), boostMat)
-    pad.position.copy(s.position).add(new THREE.Vector3(0, 0.08, 0))
-    pad.lookAt(s.position.clone().add(s.tangent))
-    pad.rotateX(-Math.PI / 2)
-    group.add(pad)
+  for (const pad of ribbon.boostPads) {
+    const padMesh = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.08, 3.2), boostMat)
+    padMesh.position.copy(pad.position)
+    padMesh.lookAt(pad.position.clone().add(pad.tangent))
+    padMesh.rotateX(-Math.PI / 2)
+    group.add(padMesh)
   }
   return group
 }

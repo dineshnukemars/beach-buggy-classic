@@ -1,6 +1,12 @@
-import { getAsset, parseSceneDocument, type AssetManifest, type SceneDocument } from '@studio/core'
+import { fixedSteps, getAsset, parseSceneDocument, type AssetManifest, type SceneDocument } from '@studio/core'
 import { instantiateGltf, loadManifest } from '@studio/assets'
-import { World, aiInput, createDefaultBeachScene } from '@studio/physics'
+import {
+  World,
+  aiInput,
+  createDefaultBeachScene,
+  parseVehicleTuning,
+  type VehicleTuning,
+} from '@studio/physics'
 import { applyVehicle, placeEntities } from '@studio/three-render'
 import * as THREE from 'three'
 import { createBuggyMesh, createEnvironment, createTrackMesh } from './visuals'
@@ -29,6 +35,9 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.shadowMap.enabled = true
+renderer.outputColorSpace = THREE.SRGBColorSpace
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.toneMappingExposure = 1.05
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color(0x7ec8ff)
@@ -44,9 +53,11 @@ scene.add(createEnvironment())
 
 let sceneDoc: SceneDocument = createDefaultBeachScene()
 let manifest: AssetManifest = { version: 1, assets: [] }
-let world = new World(1 + AI_COUNT, { scene: sceneDoc, totalLaps: TOTAL_LAPS })
+let tuning: VehicleTuning = parseVehicleTuning(undefined)
+let world: World | undefined
 const entityMeshes = new Map<string, THREE.Object3D>()
 let trackMesh: THREE.Object3D | undefined
+let physicsAcc = 0
 
 type Racer = {
   mesh: THREE.Group
@@ -61,8 +72,9 @@ const names = ['You', 'Sandy', 'Coral', 'Dune']
 let racers: Racer[] = []
 
 function rebuildTrack(): void {
+  if (!world) return
   if (trackMesh) scene.remove(trackMesh)
-  trackMesh = createTrackMesh(world.samples, world.halfWidth)
+  trackMesh = createTrackMesh(world.samples, world.totalLength, world.halfWidth, world.boostPads)
   scene.add(trackMesh)
 }
 
@@ -73,6 +85,10 @@ function playerInput() {
     steer: (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0) + (keys.has('ArrowRight') || keys.has('KeyD') ? -1 : 0),
     boost: keys.has('Space'),
   }
+}
+
+function emptyInputs(count: number) {
+  return Array.from({ length: count }, () => ({ throttle: 0, steer: 0, brake: 0, boost: false }))
 }
 
 async function racerMesh(i: number): Promise<THREE.Group> {
@@ -90,8 +106,16 @@ async function racerMesh(i: number): Promise<THREE.Group> {
 async function spawnRacers(): Promise<void> {
   for (const r of racers) scene.remove(r.mesh)
   racers = []
-  world = new World(1 + AI_COUNT, { scene: sceneDoc, totalLaps: TOTAL_LAPS })
+  world?.dispose()
+  world = await World.create(1 + AI_COUNT, {
+    scene: sceneDoc,
+    totalLaps: TOTAL_LAPS,
+    backend: 'rapier',
+    tuning,
+  })
+  physicsAcc = 0
   rebuildTrack()
+  for (let i = 0; i < 30; i++) world.step(world.timestep, emptyInputs(1 + AI_COUNT))
   for (let i = 0; i < 1 + AI_COUNT; i++) {
     const mesh = await racerMesh(i)
     scene.add(mesh)
@@ -120,7 +144,7 @@ function ordinal(n: number): string {
 }
 
 function updateHud(): void {
-  const body = world.bodies[0]
+  const body = world?.bodies[0]
   if (!body) return
   placeEl.textContent = ordinal(body.place)
   lapEl.textContent = `Lap ${Math.min(body.lap, TOTAL_LAPS)} / ${TOTAL_LAPS}`
@@ -145,7 +169,7 @@ function restartRace(): void {
 function endRace(): void {
   phase = 'finished'
   countdownEl.textContent = ''
-  const playerPlace = world.bodies[0]?.place ?? 4
+  const playerPlace = world?.bodies[0]?.place ?? 4
   overlayTitle.textContent = playerPlace === 1 ? 'You Win!' : 'Race Over'
   overlaySub.textContent = finishOrder.map((n, i) => `${ordinal(i + 1)} ${n}`).join(' · ')
   startBtn.textContent = 'Race Again'
@@ -155,7 +179,7 @@ function endRace(): void {
 startBtn.addEventListener('click', () => void startRace())
 
 function updateCamera(dt: number): void {
-  const body = world.bodies[0]
+  const body = world?.bodies[0]
   if (!body) return
   const back = new THREE.Vector3(
     -Math.sin(body.heading) * 11,
@@ -170,13 +194,27 @@ function updateCamera(dt: number): void {
   )
 }
 
+function stepPhysicsFrame(frameDt: number, inputs: ReturnType<typeof playerInput>[]): void {
+  if (!world) return
+  const { steps, rest } = fixedSteps(physicsAcc, frameDt, world.timestep)
+  physicsAcc = rest
+  for (let i = 0; i < steps; i++) world.step(world.timestep, inputs)
+}
+
 let last = performance.now()
 function frame(now: number): void {
   const dt = Math.min(0.05, (now - last) / 1000)
   last = now
 
+  if (!world) {
+    renderer.render(scene, camera)
+    requestAnimationFrame(frame)
+    return
+  }
+
   if (phase === 'countdown') {
     countdownAcc += dt
+    stepPhysicsFrame(dt, emptyInputs(racers.length))
     if (countdownAcc >= 1) {
       countdownAcc = 0
       countdown -= 1
@@ -187,7 +225,7 @@ function frame(now: number): void {
         phase = 'racing'
       }
     }
-    racers.forEach((r, i) => applyVehicle(r.mesh, world.bodies[i]))
+    racers.forEach((r, i) => applyVehicle(r.mesh, world!.bodies[i]))
     updateCamera(dt)
   } else if (phase === 'racing') {
     countdownAcc += dt
@@ -195,19 +233,26 @@ function frame(now: number): void {
     const inputs = racers.map((r, i) =>
       r.isPlayer
         ? playerInput()
-        : aiInput(world.bodies[i], world.samples, world.totalLength, r.skill, r.lookAhead, now),
+        : aiInput(
+            world!.bodies[i],
+            world!.samples,
+            world!.totalLength,
+            r.skill,
+            r.lookAhead,
+            world!.simClock,
+          ),
     )
-    world.step(dt, inputs)
+    stepPhysicsFrame(dt, inputs)
     racers.forEach((r, i) => {
-      applyVehicle(r.mesh, world.bodies[i])
-      if (world.bodies[i].finished && !finishOrder.includes(r.name)) finishOrder.push(r.name)
+      applyVehicle(r.mesh, world!.bodies[i])
+      if (world!.bodies[i].finished && !finishOrder.includes(r.name)) finishOrder.push(r.name)
     })
     updateHud()
     updateCamera(dt)
     if (world.bodies[0]?.finished && finishOrder.includes('You')) {
       const rest = racers
         .filter((r) => !finishOrder.includes(r.name))
-        .sort((a, b) => world.bodies[racers.indexOf(a)].progress - world.bodies[racers.indexOf(b)].progress)
+        .sort((a, b) => world!.bodies[racers.indexOf(a)].raceDistance - world!.bodies[racers.indexOf(b)].raceDistance)
         .reverse()
         .map((r) => r.name)
       finishOrder.push(...rest)
@@ -240,8 +285,13 @@ async function boot(): Promise<void> {
   } catch {
     manifest = { version: 1, assets: [] }
   }
-  world = new World(1 + AI_COUNT, { scene: sceneDoc, totalLaps: TOTAL_LAPS })
-  rebuildTrack()
+  try {
+    const tuningRes = await fetch('/tuning/buggy-default.json')
+    if (tuningRes.ok) tuning = parseVehicleTuning(await tuningRes.json())
+  } catch {
+    tuning = parseVehicleTuning(undefined)
+  }
+
   placeEntities(scene, sceneDoc, entityMeshes)
   for (const entity of sceneDoc.entities) {
     const ref = getAsset(manifest, entity.assetId)
