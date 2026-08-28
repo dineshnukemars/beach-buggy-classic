@@ -15,10 +15,12 @@
     "dev:texture": "npm run dev -w @studio/texture-preview",
     "dev:anim": "npm run dev -w @studio/animation-preview",
     "dev:scene": "npm run dev -w @studio/scene-editor",
+    "setup": "bash scripts/setup-env.sh",
     "test": "npm test --workspaces --if-present",
     "test:pipeline": "npm run smoke -w @studio/pipeline-smoke"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.2.1",
     "typescript": "~5.8.3"
   }
 }

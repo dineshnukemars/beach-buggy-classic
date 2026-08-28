@@ -18,6 +18,16 @@ tools/import-cli
 tools/pipeline-smoke
 ```
 
+## Setup
+
+```bash
+npm run setup
+```
+
+Installs npm dependencies, Playwright Chromium, links Blender to `~/.local/bin`, and runs unit tests.
+
+Requires **Node.js 20+** and **Blender** (macOS app at `/Applications/Blender.app`).
+
 ## Run
 
 ```bash
