@@ -17,12 +17,26 @@
         </div>
         <div id="countdown"></div>
         <div id="message"></div>
-        <div id="controls-hint">Arrows / WASD · Space boost · R restart</div>
+        <div id="controls-hint">Arrows / WASD · Space boost · R restart · F8 report</div>
       </div>
+      <aside id="dev-panel" class="hidden" aria-label="Feedback report">
+        <h2>Report</h2>
+        <p id="dev-target">Click an object</p>
+        <fieldset id="dev-tags"></fieldset>
+        <label class="dev-note-label">Note
+          <textarea id="dev-note" rows="4" placeholder="What's wrong?"></textarea>
+        </label>
+        <div class="dev-actions">
+          <button type="button" id="dev-submit">Submit</button>
+          <button type="button" id="dev-resume">Resume</button>
+          <button type="button" id="dev-cancel">Cancel</button>
+        </div>
+        <p id="dev-status"></p>
+      </aside>
       <div id="overlay" class="hidden">
         <h1 id="overlay-title">Beach Buggy Classic</h1>
-        <p id="overlay-sub">Race the beach. Beat the bots.</p>
-        <button id="start-btn" type="button">Start Race</button>
+        <p id="overlay-sub">One car on a flat plane.</p>
+        <button id="start-btn" type="button">Start</button>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

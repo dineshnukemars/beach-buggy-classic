@@ -1,7 +1,9 @@
 import path from 'node:path'
 import { defineConfig } from 'vite'
+import { feedbackApiPlugin } from './feedbackApi.ts'
 
 export default defineConfig({
+  plugins: [feedbackApiPlugin(path.resolve(__dirname, 'feedback'))],
   server: { port: 5173, host: true },
   resolve: {
     alias: {

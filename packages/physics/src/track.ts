@@ -10,6 +10,9 @@ export type TrackSample = {
 
 export const DEFAULT_HALF_WIDTH = 7.5
 
+/** Half-extent of the sandbox ground box/plane (meters). Top face is y = 0. */
+export const SANDBOX_GROUND_HALF = 120
+
 export function createTrackCenterline(pointCount = 240): THREE.Vector3[] {
   const points: THREE.Vector3[] = []
   for (let i = 0; i < pointCount; i++) {
@@ -133,6 +136,6 @@ export function defaultBeachTrackSpec(pointCount = 64): TrackSpec {
   return {
     halfWidth: DEFAULT_HALF_WIDTH,
     centerline: vectorsToTuples(createTrackCenterline(pointCount)),
-    boostPads: [0, 0.25, 0.5, 0.75],
+    boostPads: [0.12, 0.37, 0.62, 0.87],
   }
 }

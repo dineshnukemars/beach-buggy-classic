@@ -39,10 +39,12 @@ export function applyHandling(
 
   const forward = input.throttle - input.brake
   let engineForce = 0
-  let brake = input.brake * tuning.brakeForce
+  let brake = 0
 
   if (forward > 0 && speed < tuning.maxSpeed * (state.boostTimer > 0 ? 1.25 : 1)) {
     engineForce = forward * tuning.engineForce
+  } else if (forward < 0 && speed > 1.2) {
+    brake = input.brake * tuning.brakeForce
   } else if (forward < 0 && speed > -tuning.reverseSpeed) {
     engineForce = forward * tuning.engineForce * 0.65
   }

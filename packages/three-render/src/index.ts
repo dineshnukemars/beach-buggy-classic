@@ -1,3 +1,4 @@
+import type { SceneDocument, StudioRef } from '@studio/core'
 import type { VehicleState } from '@studio/physics'
 import * as THREE from 'three'
 
@@ -39,9 +40,13 @@ export function entityPlaceholder(color = 0x88aacc): THREE.Mesh {
   return mesh
 }
 
+export function tagStudioRef(object: THREE.Object3D, ref: StudioRef): void {
+  object.userData.studioRef = ref
+}
+
 export function placeEntities(
   scene: THREE.Scene,
-  doc: import('@studio/core').SceneDocument,
+  doc: SceneDocument,
   meshes: Map<string, THREE.Object3D>,
 ): void {
   for (const entity of doc.entities) {
@@ -51,6 +56,7 @@ export function placeEntities(
       meshes.set(entity.id, obj)
       scene.add(obj)
     }
+    tagStudioRef(obj, { kind: 'entity', id: entity.id, assetId: entity.assetId, label: entity.id })
     obj.position.set(...entity.position)
     obj.rotation.y = entity.rotationY
     obj.scale.setScalar(entity.scale)

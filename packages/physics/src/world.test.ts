@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createDefaultBeachScene } from './index'
+import * as THREE from 'three'
+import { createDefaultBeachScene, createSandboxScene } from './index'
 import { initPhysics } from './init'
 import { FIXED_TIMESTEP } from './rapierSim'
 import { World } from './world'
@@ -44,6 +45,47 @@ test('arcade backend still supports checkpoint progression', async () => {
   body.position.copy(start)
   world.step(1 / 60, [{ throttle: 0, steer: 0, brake: 0, boost: false }])
   assert.ok(body.lap >= 1)
+  world.dispose()
+})
+
+test('plantOnStartGrid leaves the field upright and still', async () => {
+  await initPhysics()
+  const world = await World.create(4, { scene: createDefaultBeachScene(), backend: 'rapier' })
+  for (let i = 0; i < 90; i++) {
+    world.step(FIXED_TIMESTEP, Array.from({ length: 4 }, () => ({ throttle: 0, steer: 0, brake: 1, boost: false })))
+  }
+  world.plantOnStartGrid()
+  world.holdForCountdown()
+  for (const body of world.bodies) {
+    const euler = new THREE.Euler().setFromQuaternion(body.rotation, 'YXZ')
+    assert.ok(Math.abs(euler.x) < 0.2, `pitch ${euler.x}`)
+    assert.ok(Math.abs(euler.z) < 0.2, `roll ${euler.z}`)
+    assert.ok(body.speed < 4, `speed ${body.speed}`)
+  }
+  world.dispose()
+})
+
+test('flat sandbox stays on the plane under throttle', async () => {
+  await initPhysics()
+  const world = await World.create(1, {
+    scene: createSandboxScene(),
+    backend: 'rapier',
+    flatGround: true,
+    laterals: [0],
+  })
+  for (let i = 0; i < 90; i++) {
+    world.step(FIXED_TIMESTEP, [{ throttle: 0, steer: 0, brake: 1, boost: false }])
+  }
+  world.plantOnStartGrid()
+  const start = world.bodies[0].position.clone()
+  for (let i = 0; i < 600; i++) {
+    world.step(FIXED_TIMESTEP, [{ throttle: 1, steer: 0, brake: 0, boost: false }])
+  }
+  const end = world.bodies[0].position
+  assert.ok(Number.isFinite(end.x) && Number.isFinite(end.y) && Number.isFinite(end.z))
+  assert.ok(end.distanceTo(start) > 150, `only moved ${end.distanceTo(start)}`)
+  assert.ok(end.y > -0.5 && end.y < 2.5, `chassis y ${end.y}`)
+  assert.ok(world.bodies[0].speed > 1)
   world.dispose()
 })
 

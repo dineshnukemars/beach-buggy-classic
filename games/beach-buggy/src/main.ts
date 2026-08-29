@@ -1,35 +1,49 @@
-import { fixedSteps, getAsset, parseSceneDocument, type AssetManifest, type SceneDocument } from '@studio/core'
+import { fixedSteps, getAsset, type AssetManifest, type SceneDocument } from '@studio/core'
 import { instantiateGltf, loadManifest } from '@studio/assets'
 import {
   World,
-  aiInput,
-  createDefaultBeachScene,
+  createSandboxScene,
   parseVehicleTuning,
   type VehicleTuning,
 } from '@studio/physics'
-import { applyVehicle, placeEntities } from '@studio/three-render'
+import { applyVehicle } from '@studio/three-render'
 import * as THREE from 'three'
-import { createBuggyMesh, createEnvironment, createTrackMesh } from './visuals'
+import { createDevMode, tagRacer } from './dev/DevModeController'
+import { LookbackBuffer } from './dev/lookback'
+import { isPanelField } from './dev/panel'
+import { createBuggyMesh, createFlatGround, followFlatGround } from './visuals'
 
-const TOTAL_LAPS = 3
-const AI_COUNT = 3
+const TOTAL_LAPS = 999
+const RACER_COUNT = 1
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game')!
 const placeEl = document.querySelector('#place')!
 const lapEl = document.querySelector('#lap')!
 const speedEl = document.querySelector('#speed')!
 const countdownEl = document.querySelector('#countdown')!
-const overlay = document.querySelector('#overlay')!
-const overlayTitle = document.querySelector('#overlay-title')!
-const overlaySub = document.querySelector('#overlay-sub')!
+const overlay = document.querySelector<HTMLElement>('#overlay')!
 const startBtn = document.querySelector<HTMLButtonElement>('#start-btn')!
 
 const keys = new Set<string>()
+const lookback = new LookbackBuffer()
+let scenePath = '/scenes/default.json'
+let dev: ReturnType<typeof createDevMode> | undefined
+
 window.addEventListener('keydown', (e) => {
+  if (isPanelField(e.target)) return
+  if (e.code === 'F8' || e.code === 'Backquote') {
+    e.preventDefault()
+    if (e.repeat) return
+    dev?.toggle({ pause: !e.shiftKey })
+    return
+  }
   keys.add(e.code)
-  if (e.code === 'KeyR') restartRace()
+  if (e.code === 'KeyR' && !dev?.isActive()) restartRace()
 })
-window.addEventListener('keyup', (e) => keys.delete(e.code))
+window.addEventListener('keyup', (e) => {
+  if (isPanelField(e.target)) return
+  keys.delete(e.code)
+})
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -41,22 +55,20 @@ renderer.toneMappingExposure = 1.05
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color(0x7ec8ff)
-scene.fog = new THREE.Fog(0x9ad4ff, 120, 280)
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500)
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 2000)
 scene.add(new THREE.HemisphereLight(0xb1e1ff, 0xd2a679, 0.85))
 const sun = new THREE.DirectionalLight(0xfff0d0, 1.15)
 sun.position.set(40, 60, 20)
 sun.castShadow = true
 sun.shadow.mapSize.set(2048, 2048)
 scene.add(sun)
-scene.add(createEnvironment())
+const ground = createFlatGround()
+scene.add(ground)
 
-let sceneDoc: SceneDocument = createDefaultBeachScene()
+let sceneDoc: SceneDocument = createSandboxScene()
 let manifest: AssetManifest = { version: 1, assets: [] }
 let tuning: VehicleTuning = parseVehicleTuning(undefined)
 let world: World | undefined
-const entityMeshes = new Map<string, THREE.Object3D>()
-let trackMesh: THREE.Object3D | undefined
 let physicsAcc = 0
 
 type Racer = {
@@ -71,14 +83,11 @@ const buggyColors = [0xff6b2c, 0x2f9bff, 0x3dcf6a, 0xf2d64b]
 const names = ['You', 'Sandy', 'Coral', 'Dune']
 let racers: Racer[] = []
 
-function rebuildTrack(): void {
-  if (!world) return
-  if (trackMesh) scene.remove(trackMesh)
-  trackMesh = createTrackMesh(world.samples, world.totalLength, world.halfWidth, world.boostPads)
-  scene.add(trackMesh)
-}
 
 function playerInput() {
+  if (dev?.isTyping() || (dev?.isActive() && dev.isPaused())) {
+    return { throttle: 0, steer: 0, brake: 0, boost: false }
+  }
   return {
     throttle: keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0,
     brake: keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0,
@@ -88,7 +97,7 @@ function playerInput() {
 }
 
 function emptyInputs(count: number) {
-  return Array.from({ length: count }, () => ({ throttle: 0, steer: 0, brake: 0, boost: false }))
+  return Array.from({ length: count }, () => ({ throttle: 0, steer: 0, brake: 1, boost: false }))
 }
 
 async function racerMesh(i: number): Promise<THREE.Group> {
@@ -107,19 +116,22 @@ async function spawnRacers(): Promise<void> {
   for (const r of racers) scene.remove(r.mesh)
   racers = []
   world?.dispose()
-  world = await World.create(1 + AI_COUNT, {
+  world = await World.create(RACER_COUNT, {
     scene: sceneDoc,
     totalLaps: TOTAL_LAPS,
+    laterals: [0],
     backend: 'rapier',
     tuning,
+    flatGround: true,
   })
   physicsAcc = 0
-  rebuildTrack()
-  for (let i = 0; i < 30; i++) world.step(world.timestep, emptyInputs(1 + AI_COUNT))
-  for (let i = 0; i < 1 + AI_COUNT; i++) {
+  for (let i = 0; i < 90; i++) world.step(world.timestep, emptyInputs(RACER_COUNT))
+  world.plantOnStartGrid()
+  for (let i = 0; i < RACER_COUNT; i++) {
     const mesh = await racerMesh(i)
     scene.add(mesh)
     applyVehicle(mesh, world.bodies[i])
+    tagRacer(mesh, i, names[i])
     racers.push({
       mesh,
       isPlayer: i === 0,
@@ -128,32 +140,24 @@ async function spawnRacers(): Promise<void> {
       name: names[i],
     })
   }
+  dev?.onWorldReset()
 }
 
-type Phase = 'menu' | 'countdown' | 'racing' | 'finished'
+type Phase = 'menu' | 'countdown' | 'racing'
 let phase: Phase = 'menu'
 let countdown = 3
 let countdownAcc = 0
-let finishOrder: string[] = []
-
-function ordinal(n: number): string {
-  if (n === 1) return '1st'
-  if (n === 2) return '2nd'
-  if (n === 3) return '3rd'
-  return `${n}th`
-}
 
 function updateHud(): void {
   const body = world?.bodies[0]
   if (!body) return
-  placeEl.textContent = ordinal(body.place)
-  lapEl.textContent = `Lap ${Math.min(body.lap, TOTAL_LAPS)} / ${TOTAL_LAPS}`
+  placeEl.textContent = ''
+  lapEl.textContent = ''
   speedEl.textContent = `${Math.max(0, Math.round(body.speed * 2.1))} mph`
 }
 
 async function startRace(): Promise<void> {
   await spawnRacers()
-  finishOrder = []
   phase = 'countdown'
   countdown = 3
   countdownAcc = 0
@@ -166,16 +170,6 @@ function restartRace(): void {
   void startRace()
 }
 
-function endRace(): void {
-  phase = 'finished'
-  countdownEl.textContent = ''
-  const playerPlace = world?.bodies[0]?.place ?? 4
-  overlayTitle.textContent = playerPlace === 1 ? 'You Win!' : 'Race Over'
-  overlaySub.textContent = finishOrder.map((n, i) => `${ordinal(i + 1)} ${n}`).join(' · ')
-  startBtn.textContent = 'Race Again'
-  overlay.classList.remove('hidden')
-}
-
 startBtn.addEventListener('click', () => void startRace())
 
 function updateCamera(dt: number): void {
@@ -186,19 +180,23 @@ function updateCamera(dt: number): void {
     5.5,
     -Math.cos(body.heading) * 11,
   )
-  camera.position.lerp(body.position.clone().add(back), 1 - Math.exp(-5 * dt))
+  camera.position.lerp(body.position.clone().add(back), 1 - Math.exp(-3.2 * dt))
   camera.lookAt(
     body.position
       .clone()
       .add(new THREE.Vector3(Math.sin(body.heading) * 8, 1.4, Math.cos(body.heading) * 8)),
   )
+  followFlatGround(ground, body.position)
 }
 
 function stepPhysicsFrame(frameDt: number, inputs: ReturnType<typeof playerInput>[]): void {
-  if (!world) return
+  if (!world || dev?.isPaused()) return
   const { steps, rest } = fixedSteps(physicsAcc, frameDt, world.timestep)
   physicsAcc = rest
-  for (let i = 0; i < steps; i++) world.step(world.timestep, inputs)
+  for (let i = 0; i < steps; i++) {
+    world.step(world.timestep, inputs)
+    dev?.afterPhysicsStep()
+  }
 }
 
 let last = performance.now()
@@ -215,6 +213,7 @@ function frame(now: number): void {
   if (phase === 'countdown') {
     countdownAcc += dt
     stepPhysicsFrame(dt, emptyInputs(racers.length))
+    world.holdForCountdown()
     if (countdownAcc >= 1) {
       countdownAcc = 0
       countdown -= 1
@@ -230,39 +229,16 @@ function frame(now: number): void {
   } else if (phase === 'racing') {
     countdownAcc += dt
     if (countdownEl.textContent === 'GO!' && countdownAcc > 0.7) countdownEl.textContent = ''
-    const inputs = racers.map((r, i) =>
-      r.isPlayer
-        ? playerInput()
-        : aiInput(
-            world!.bodies[i],
-            world!.samples,
-            world!.totalLength,
-            r.skill,
-            r.lookAhead,
-            world!.simClock,
-          ),
-    )
-    stepPhysicsFrame(dt, inputs)
-    racers.forEach((r, i) => {
-      applyVehicle(r.mesh, world!.bodies[i])
-      if (world!.bodies[i].finished && !finishOrder.includes(r.name)) finishOrder.push(r.name)
-    })
+    stepPhysicsFrame(dt, [playerInput()])
+    racers.forEach((r, i) => applyVehicle(r.mesh, world!.bodies[i]))
     updateHud()
     updateCamera(dt)
-    if (world.bodies[0]?.finished && finishOrder.includes('You')) {
-      const rest = racers
-        .filter((r) => !finishOrder.includes(r.name))
-        .sort((a, b) => world!.bodies[racers.indexOf(a)].raceDistance - world!.bodies[racers.indexOf(b)].raceDistance)
-        .reverse()
-        .map((r) => r.name)
-      finishOrder.push(...rest)
-      endRace()
-    }
   } else {
     updateCamera(dt)
   }
 
   renderer.render(scene, camera)
+  dev?.afterRender(now)
   requestAnimationFrame(frame)
 }
 
@@ -273,13 +249,8 @@ window.addEventListener('resize', () => {
 })
 
 async function boot(): Promise<void> {
-  const scenePath = new URLSearchParams(location.search).get('scene') ?? '/scenes/default.json'
-  try {
-    const res = await fetch(scenePath)
-    if (res.ok) sceneDoc = parseSceneDocument(await res.json())
-  } catch {
-    sceneDoc = createDefaultBeachScene()
-  }
+  scenePath = 'sandbox-flat'
+  sceneDoc = createSandboxScene()
   try {
     manifest = await loadManifest('/assets/manifest.json')
   } catch {
@@ -292,24 +263,18 @@ async function boot(): Promise<void> {
     tuning = parseVehicleTuning(undefined)
   }
 
-  placeEntities(scene, sceneDoc, entityMeshes)
-  for (const entity of sceneDoc.entities) {
-    const ref = getAsset(manifest, entity.assetId)
-    if (!ref) continue
-    try {
-      const inst = await instantiateGltf(ref)
-      const old = entityMeshes.get(entity.id)
-      if (old) scene.remove(old)
-      inst.position.set(...entity.position)
-      inst.rotation.y = entity.rotationY
-      inst.scale.setScalar(entity.scale)
-      scene.add(inst)
-      entityMeshes.set(entity.id, inst)
-    } catch {
-      /* keep placeholder */
-    }
-  }
   await spawnRacers()
+  dev = createDevMode({
+    scene,
+    camera,
+    canvas,
+    overlay,
+    lookback,
+    getWorld: () => world,
+    getPhase: () => phase,
+    getSceneDoc: () => sceneDoc,
+    getScenePath: () => scenePath,
+  })
   updateHud()
   overlay.classList.remove('hidden')
   requestAnimationFrame(frame)

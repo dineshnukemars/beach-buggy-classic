@@ -16,3 +16,32 @@ export {
   type TrackSpec,
   type Vec3Tuple,
 } from './scene'
+export {
+  isStudioRefKind,
+  parseStudioRef,
+  STUDIO_REF_KINDS,
+  type StudioRef,
+  type StudioRefKind,
+} from './studioRef'
+export {
+  computeAgentHints,
+  FEEDBACK_ID_PATTERN,
+  FEEDBACK_LAYERS,
+  FEEDBACK_TAGS,
+  isFeedbackLayer,
+  isFeedbackTag,
+  makeFeedbackId,
+  parseFeedbackReport,
+  parsePoseHistory,
+  sceneFileFromPath,
+  serializePoseHistory,
+  type AgentHints,
+  type EnvironmentGeneration,
+  type FeedbackLayer,
+  type FeedbackPlayerContext,
+  type FeedbackReport,
+  type FeedbackTag,
+  type PoseHistorySample,
+  type QuatTuple,
+  type WorldTransform,
+} from './feedback'

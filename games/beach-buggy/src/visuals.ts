@@ -1,6 +1,53 @@
+import type { EnvironmentGeneration } from '@studio/core'
 import type { TrackSample } from '@studio/physics'
 import { buildTrackRibbon, DEFAULT_HALF_WIDTH, ribbonToThreeGeometry } from '@studio/physics'
+import { tagStudioRef } from '@studio/three-render'
 import * as THREE from 'three'
+
+export const ENV_GENERATION: EnvironmentGeneration = {
+  palmCount: 0,
+  palmRadiusBase: 68,
+  palmRadiusStep: 4,
+  angleOffset: 0.2,
+}
+
+const GROUND_CELL = 8
+const GROUND_TILE = 2000
+
+export function createFlatGround(): THREE.Group {
+  const group = new THREE.Group()
+  const cells = 16
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')!
+  const cell = 512 / cells
+  for (let y = 0; y < cells; y++) {
+    for (let x = 0; x < cells; x++) {
+      ctx.fillStyle = (x + y) % 2 === 0 ? '#6e6e6e' : '#4f4f4f'
+      ctx.fillRect(x * cell, y * cell, cell, cell)
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(GROUND_TILE / GROUND_CELL, GROUND_TILE / GROUND_CELL)
+  tex.colorSpace = THREE.SRGBColorSpace
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(GROUND_TILE, GROUND_TILE),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0, side: THREE.DoubleSide }),
+  )
+  ground.rotation.x = -Math.PI / 2
+  ground.receiveShadow = true
+  tagStudioRef(ground, { kind: 'environment', id: 'env:ground', label: 'Ground' })
+  group.add(ground)
+  return group
+}
+
+export function followFlatGround(ground: THREE.Object3D, pos: THREE.Vector3): void {
+  ground.position.x = Math.round(pos.x / GROUND_CELL) * GROUND_CELL
+  ground.position.z = Math.round(pos.z / GROUND_CELL) * GROUND_CELL
+}
 
 export function createBuggyMesh(color: number): THREE.Group {
   const buggy = new THREE.Group()
@@ -43,15 +90,17 @@ export function createTrackMesh(
   samples: TrackSample[],
   totalLength: number,
   halfWidth = DEFAULT_HALF_WIDTH,
-  boostPads: number[] = [0, 0.25, 0.5, 0.75],
+  boostPads: number[] = [0.12, 0.37, 0.62, 0.87],
 ): THREE.Group {
   const group = new THREE.Group()
+  tagStudioRef(group, { kind: 'track', id: 'track:road', label: 'Track' })
   const ribbon = buildTrackRibbon(samples, totalLength, halfWidth, boostPads)
   const road = new THREE.Mesh(
     ribbonToThreeGeometry(ribbon),
     new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.9 }),
   )
   road.receiveShadow = true
+  tagStudioRef(road, { kind: 'track', id: 'track:road', label: 'Road' })
   group.add(road)
 
   const lineMat = new THREE.MeshStandardMaterial({ color: 0xfff3c4, roughness: 0.8 })
@@ -68,13 +117,16 @@ export function createTrackMesh(
     emissive: 0x1188aa,
     emissiveIntensity: 0.6,
   })
-  for (const pad of ribbon.boostPads) {
+  ribbon.boostPads.forEach((pad, i) => {
     const padMesh = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.08, 3.2), boostMat)
     padMesh.position.copy(pad.position)
-    padMesh.lookAt(pad.position.clone().add(pad.tangent))
-    padMesh.rotateX(-Math.PI / 2)
+    padMesh.quaternion.setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      Math.atan2(pad.tangent.x, pad.tangent.z),
+    )
+    tagStudioRef(padMesh, { kind: 'track', id: `track:boost-${i}`, label: `Boost pad ${i}` })
     group.add(padMesh)
-  }
+  })
   return group
 }
 
@@ -87,6 +139,7 @@ export function createEnvironment(): THREE.Group {
   ground.rotation.x = -Math.PI / 2
   ground.position.y = -0.15
   ground.receiveShadow = true
+  tagStudioRef(ground, { kind: 'environment', id: 'env:ground', label: 'Sand' })
   env.add(ground)
   const water = new THREE.Mesh(
     new THREE.CircleGeometry(220, 64),
@@ -94,12 +147,14 @@ export function createEnvironment(): THREE.Group {
   )
   water.rotation.x = -Math.PI / 2
   water.position.y = -0.35
+  tagStudioRef(water, { kind: 'environment', id: 'env:water', label: 'Water' })
   env.add(water)
   const palmTrunkMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.9 })
   const palmLeafMat = new THREE.MeshStandardMaterial({ color: 0x2f8f4e, roughness: 0.8 })
-  for (let i = 0; i < 28; i++) {
-    const angle = (i / 28) * Math.PI * 2 + 0.2
-    const r = 68 + (i % 5) * 4
+  const { palmCount, palmRadiusBase, palmRadiusStep, angleOffset } = ENV_GENERATION
+  for (let i = 0; i < palmCount; i++) {
+    const angle = (i / palmCount) * Math.PI * 2 + angleOffset
+    const r = palmRadiusBase + (i % 5) * palmRadiusStep
     const palm = new THREE.Group()
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 6, 6), palmTrunkMat)
     trunk.position.y = 3
@@ -112,6 +167,7 @@ export function createEnvironment(): THREE.Group {
       palm.add(leaf)
     }
     palm.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r)
+    tagStudioRef(palm, { kind: 'environment', id: `env:palm-${i}`, label: `Palm ${i}` })
     env.add(palm)
   }
   return env

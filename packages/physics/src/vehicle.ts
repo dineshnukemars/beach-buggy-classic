@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { InputFrame } from '@studio/core'
+import { CHASSIS_SPAWN_CLEARANCE } from './tuning'
 import { projectOntoTrack, sampleAtProgress, type TrackSample } from './track'
 import { advanceRaceState, checkpointProgresses, defaultCheckpointFractions } from './race'
 
@@ -38,7 +39,7 @@ export function createVehicleState(spawn: TrackSample, lateral = 0): VehicleStat
   const pos = spawn.position
     .clone()
     .add(spawn.binormal.clone().multiplyScalar(lateral))
-    .add(new THREE.Vector3(0, 0.55, 0))
+    .add(new THREE.Vector3(0, CHASSIS_SPAWN_CLEARANCE, 0))
   const heading = Math.atan2(spawn.tangent.x, spawn.tangent.z)
   const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), heading)
   return {
@@ -63,8 +64,8 @@ export function createVehicleState(spawn: TrackSample, lateral = 0): VehicleStat
 }
 
 export function syncDerivedMotion(state: VehicleState): void {
-  const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(state.rotation)
-  state.heading = Math.atan2(forward.x, forward.z)
+  const euler = new THREE.Euler().setFromQuaternion(state.rotation, 'YXZ')
+  state.heading = euler.y
 }
 
 export function stepVehicleArcade(
@@ -104,7 +105,7 @@ export function stepVehicleArcade(
     state.position.addScaledVector(samples[proj.sampleIndex].binormal, -push)
     state.speed *= 0.92
   }
-  state.position.y = proj.nearest.y + 0.55
+  state.position.y = proj.nearest.y + CHASSIS_SPAWN_CLEARANCE
 
   const race = advanceRaceState(
     state,
