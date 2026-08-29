@@ -39,7 +39,8 @@ export function buildTrackRibbon(
     const i1 = i0 + 1
     const i2 = ((i + 1) % samples.length) * 2
     const i3 = i2 + 1
-    indices.push(i0, i2, i1, i1, i2, i3)
+    // CCW when viewed from +Y so Rapier contact normals push the chassis up.
+    indices.push(i0, i1, i2, i1, i3, i2)
   }
 
   const boostPads = boostFractions.map((frac) => {
@@ -57,6 +58,41 @@ export function buildTrackRibbon(
     indices: new Uint32Array(indices),
     boostPads,
   }
+}
+
+export type TrackBox = {
+  position: THREE.Vector3
+  rotation: THREE.Quaternion
+  halfExtents: [number, number, number]
+}
+
+/** Solid road segments for Rapier. The visual ribbon stays a thin strip. */
+export function buildTrackBoxes(
+  samples: TrackSample[],
+  halfWidth: number,
+  yOffset = 0.05,
+  thickness = 0.35,
+): TrackBox[] {
+  const boxes: TrackBox[] = []
+  const halfY = thickness / 2
+  for (let i = 0; i < samples.length; i++) {
+    const a = samples[i]!
+    const b = samples[(i + 1) % samples.length]!
+    const mid = a.position.clone().lerp(b.position, 0.5)
+    const delta = b.position.clone().sub(a.position)
+    const len = delta.length()
+    if (len < 1e-4) continue
+    const tangent = delta.divideScalar(len)
+    const yaw = Math.atan2(tangent.x, tangent.z)
+    const pitch = Math.asin(THREE.MathUtils.clamp(tangent.y, -1, 1))
+    const rotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'))
+    boxes.push({
+      position: new THREE.Vector3(mid.x, mid.y + yOffset - halfY, mid.z),
+      rotation,
+      halfExtents: [halfWidth, halfY, len / 2 + 0.22],
+    })
+  }
+  return boxes
 }
 
 export function ribbonToThreeGeometry(ribbon: TrackRibbon): THREE.BufferGeometry {

@@ -15,6 +15,7 @@ tools/texture-preview
 tools/animation-preview
 tools/scene-editor
 tools/import-cli
+tools/feedback-cli
 tools/pipeline-smoke
 ```
 
@@ -39,7 +40,11 @@ npm run dev:anim      # :5176
 npm run dev:scene     # :5177
 ```
 
-Beach Buggy: WASD / arrows, Space boost, R restart.
+Beach Buggy: WASD / arrows, Space boost, R restart, **F8** (or `` ` ``) to file a feedback report. See [AGENTS.md](AGENTS.md).
+
+```bash
+npm run feedback:latest   # newest in-game report as JSON
+```
 
 Import an asset (after an agent writes a file):
 

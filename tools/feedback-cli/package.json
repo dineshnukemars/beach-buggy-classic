@@ -1,0 +1,21 @@
+{
+  "name": "@studio/feedback-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/reports.ts"
+  },
+  "scripts": {
+    "list": "tsx src/cli.ts list",
+    "show": "tsx src/cli.ts show",
+    "latest": "tsx src/cli.ts latest",
+    "test": "node --import tsx --test src/*.test.ts"
+  },
+  "dependencies": {
+    "@studio/core": "0.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.3"
+  }
+}

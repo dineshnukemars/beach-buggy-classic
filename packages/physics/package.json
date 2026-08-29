@@ -7,7 +7,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "node --import tsx --test src/world.test.ts"
+    "test": "node --import tsx --test src/*.test.ts",
+    "sim:probe": "tsx src/probe/simProbe.ts",
+    "drive:probe": "tsx src/probe/simProbe.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.20.0",

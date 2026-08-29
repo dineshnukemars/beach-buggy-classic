@@ -17,7 +17,11 @@
     "dev:scene": "npm run dev -w @studio/scene-editor",
     "setup": "bash scripts/setup-env.sh",
     "test": "npm test --workspaces --if-present",
-    "test:pipeline": "npm run smoke -w @studio/pipeline-smoke"
+    "test:pipeline": "npm run smoke -w @studio/pipeline-smoke",
+    "sim:probe": "npm run sim:probe -w @studio/physics",
+    "drive:probe": "npm run drive:probe -w @studio/physics",
+    "feedback:latest": "npm run latest -w @studio/feedback-cli -- --json",
+    "feedback:list": "npm run list -w @studio/feedback-cli -- --json"
   },
   "devDependencies": {
     "@gltf-transform/cli": "^4.2.1",

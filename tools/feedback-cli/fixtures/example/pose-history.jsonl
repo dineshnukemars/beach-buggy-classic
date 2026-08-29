@@ -1,0 +1,2 @@
+{"simClock":11.9,"player":{"position":[1,0.5,2],"quaternion":[0,0,0,1],"speed":17,"airborneTime":0,"wheelContacts":[true,true,true,true],"collisionCount":1,"offTrackDistance":0.2}}
+{"simClock":12.4,"targetId":"env:palm-12","player":{"position":[1.4,0.5,2.6],"quaternion":[0,0,0,1],"speed":18,"airborneTime":0,"wheelContacts":[true,true,true,true],"collisionCount":1,"offTrackDistance":0.2}}
