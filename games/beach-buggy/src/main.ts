@@ -346,6 +346,13 @@ const studioHost: StudioHost = {
   isOrbitFree: () => devOrbitActive(),
   isKeyDown: (code) =>
     keys.has(code) && !dev?.isTyping() && !studioDrawer?.isTyping() && !isPanelField(document.activeElement),
+  getPickTargets: () => {
+    const targets: THREE.Object3D[] = []
+    for (const racer of racers) targets.push(racer.mesh)
+    if (physicsDebug) targets.push(...physicsDebug.getPickMeshes())
+    return targets
+  },
+  getPlayerObject: () => racers.find((r) => r.isPlayer)?.mesh ?? null,
   setMode: async (mode) => {
     studioMode = mode
     editOverlay?.setVisible(mode === 'edit')
@@ -551,11 +558,16 @@ function bindEditCanvas(): void {
       studioHost.setSelection({ kind: 'point', index: pendingPointIndex })
     } else if (pendingPick) {
       const ref = pendingPick.userData.studioRef
-      const entityId =
-        ref?.kind === 'entity'
-          ? ref.id
-          : pendingPick.name.replace(/^entity:/, '').replace(/^collider-pick:/, '')
-      if (entityId) studioHost.setSelection({ kind: 'entity', id: entityId })
+      if (ref?.kind === 'racer') {
+        const index = Number(ref.id.slice('racer:'.length))
+        if (Number.isFinite(index) && index === 0) studioHost.setSelection({ kind: 'player' })
+      } else {
+        const entityId =
+          ref?.kind === 'entity'
+            ? ref.id
+            : pendingPick.name.replace(/^entity:/, '').replace(/^collider-pick:/, '')
+        if (entityId) studioHost.setSelection({ kind: 'entity', id: entityId })
+      }
     }
 
     pointerDown = null

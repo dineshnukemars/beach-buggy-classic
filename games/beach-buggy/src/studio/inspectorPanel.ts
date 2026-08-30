@@ -53,7 +53,12 @@ export function createInspectorPanel(host: HTMLElement, studio: StudioHost): voi
       bindTransformButtons(body, studio)
       return
     }
-    body.innerHTML = '<p class="studio-note">Select a track point or entity in Edit mode.</p>'
+    if (sel?.kind === 'player') {
+      body.innerHTML =
+        '<h2>Player vehicle</h2><p class="studio-note">Use the Tune tab for mesh opacity, visual offset, and chassis offset. Collider wireframes are shown when Physics colliders is enabled.</p>'
+      return
+    }
+    body.innerHTML = '<p class="studio-note">Select a track point, entity, or the player car in Edit mode.</p>'
   }
 
   studio.onSelectionChange(refresh)

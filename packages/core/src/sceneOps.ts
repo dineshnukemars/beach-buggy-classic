@@ -4,6 +4,7 @@ import { parseSceneDocument } from './scene'
 export type Selection =
   | { kind: 'point'; index: number }
   | { kind: 'entity'; id: string }
+  | { kind: 'player' }
   | null
 
 export function cloneDoc(doc: SceneDocument): SceneDocument {

@@ -1,4 +1,5 @@
 import type { World } from '@studio/physics'
+import { tagStudioRef } from '@studio/three-render'
 import * as THREE from 'three'
 
 function rgbaToRgb(colors: Float32Array): Float32Array {
@@ -19,9 +20,15 @@ export function createPhysicsDebugLayer(scene: THREE.Scene) {
 
   let colliderLines: THREE.LineSegments | undefined
   const wheelPool: THREE.Mesh[] = []
+  const wheelPickPool: THREE.Mesh[] = []
   const wheelGeo = new THREE.SphereGeometry(1, 10, 8)
   const wheelMatContact = new THREE.MeshBasicMaterial({ color: 0x55ff88, wireframe: true })
   const wheelMatAir = new THREE.MeshBasicMaterial({ color: 0xffaa44, wireframe: true })
+  const wheelPickMat = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+  })
 
   function setEnabled(on: boolean): void {
     root.visible = on
@@ -31,6 +38,8 @@ export function createPhysicsDebugLayer(scene: THREE.Scene) {
   function clearWheelPool(): void {
     for (const mesh of wheelPool) root.remove(mesh)
     wheelPool.length = 0
+    for (const mesh of wheelPickPool) root.remove(mesh)
+    wheelPickPool.length = 0
   }
 
   function sync(world: World | undefined): void {
@@ -64,17 +73,40 @@ export function createPhysicsDebugLayer(scene: THREE.Scene) {
       root.add(mesh)
       wheelPool.push(mesh)
     }
+    while (wheelPickPool.length < hubs.length) {
+      const pick = new THREE.Mesh(wheelGeo, wheelPickMat)
+      root.add(pick)
+      wheelPickPool.push(pick)
+    }
     while (wheelPool.length > hubs.length) {
       const mesh = wheelPool.pop()!
       root.remove(mesh)
     }
+    while (wheelPickPool.length > hubs.length) {
+      const pick = wheelPickPool.pop()!
+      root.remove(pick)
+    }
     for (let i = 0; i < hubs.length; i++) {
       const hub = hubs[i]!
       const mesh = wheelPool[i]!
+      const pick = wheelPickPool[i]!
       mesh.material = hub.contact ? wheelMatContact : wheelMatAir
       mesh.position.set(hub.position[0], hub.position[1], hub.position[2])
       mesh.scale.setScalar(hub.radius)
+      pick.position.copy(mesh.position)
+      pick.scale.copy(mesh.scale)
+      pick.name = `wheel-pick:racer:${hub.racerIndex}:${hub.wheelIndex}`
+      tagStudioRef(pick, {
+        kind: 'racer',
+        id: `racer:${hub.racerIndex}`,
+        assetId: 'buggy',
+        label: hub.racerIndex === 0 ? 'Player' : `Racer ${hub.racerIndex}`,
+      })
     }
+  }
+
+  function getPickMeshes(): THREE.Mesh[] {
+    return wheelPickPool
   }
 
   function onWorldReset(): void {
@@ -92,8 +124,9 @@ export function createPhysicsDebugLayer(scene: THREE.Scene) {
     wheelGeo.dispose()
     wheelMatContact.dispose()
     wheelMatAir.dispose()
+    wheelPickMat.dispose()
     scene.remove(root)
   }
 
-  return { setEnabled, sync, onWorldReset, dispose }
+  return { setEnabled, sync, onWorldReset, dispose, getPickMeshes }
 }

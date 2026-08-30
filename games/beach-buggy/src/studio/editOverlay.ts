@@ -320,7 +320,7 @@ export function createEditOverlay(
       if (obj.name.startsWith('entity:')) entityObjs.push(obj)
     })
     const hits = raycaster.intersectObjects(
-      [...pointMeshes, ...entityObjs, ...colliderPickMeshes.values()],
+      [...pointMeshes, ...entityObjs, ...colliderPickMeshes.values(), ...host.getPickTargets()],
       true,
     )
     if (!hits.length) return null
@@ -328,7 +328,9 @@ export function createEditOverlay(
     while (obj) {
       if (typeof obj.userData.pointIndex === 'number') return obj
       if (obj.userData.studioRef?.kind === 'entity') return obj
+      if (obj.userData.studioRef?.kind === 'racer') return obj
       if (obj.name.startsWith('entity:') || obj.name.startsWith('collider-pick:')) return obj
+      if (obj.name.startsWith('wheel-pick:')) return obj
       obj = obj.parent
     }
     return null
@@ -366,6 +368,13 @@ export function createEditOverlay(
       const pt = doc.track?.centerline[selection.index]
       if (!pt) return
       focusPoint.set(pt[0], pt[1] + 0.4, pt[2])
+    } else if (selection.kind === 'player') {
+      const playerObj = host.getPlayerObject()
+      if (!playerObj) return
+      const bounds = new THREE.Box3().setFromObject(playerObj)
+      if (bounds.isEmpty()) playerObj.getWorldPosition(focusPoint)
+      else bounds.getCenter(focusPoint)
+      focusObj = playerObj
     }
 
     camera.getWorldDirection(focusViewDir)

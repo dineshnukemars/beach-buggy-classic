@@ -289,7 +289,9 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     vehicleSection?.classList.toggle('hidden', showEntity)
     entityTuneSection?.classList.toggle('hidden', !showEntity)
     if (tuneTitle) {
-      tuneTitle.textContent = showEntity ? `Entity: ${entity!.id}` : 'Player vehicle'
+      if (showEntity) tuneTitle.textContent = `Entity: ${entity!.id}`
+      else if (sel?.kind === 'player') tuneTitle.textContent = 'Player vehicle'
+      else tuneTitle.textContent = 'Player vehicle'
     }
     if (showEntity) syncEntityTuneSliders(entity)
     syncVehicleTuneGate()

@@ -17,6 +17,8 @@ export type StudioHost = {
   setMode: (mode: StudioMode) => Promise<void>
   isOrbitFree: () => boolean
   isKeyDown: (code: string) => boolean
+  getPickTargets: () => THREE.Object3D[]
+  getPlayerObject: () => THREE.Object3D | null
   onDocChange: (fn: () => void) => () => void
   onSelectionChange: (fn: () => void) => () => void
   onManifestChange: (fn: () => void) => () => void
