@@ -353,6 +353,10 @@ const studioHost: StudioHost = {
     return targets
   },
   getPlayerObject: () => racers.find((r) => r.isPlayer)?.mesh ?? null,
+  getWheelHubPosition: (wheelIndex) => {
+    const hub = world?.debugWheelHubs().find((h) => h.racerIndex === 0 && h.wheelIndex === wheelIndex)
+    return hub ? new THREE.Vector3(hub.position[0], hub.position[1], hub.position[2]) : null
+  },
   setMode: async (mode) => {
     studioMode = mode
     editOverlay?.setVisible(mode === 'edit')
@@ -557,16 +561,22 @@ function bindEditCanvas(): void {
     if (pendingPointIndex !== null) {
       studioHost.setSelection({ kind: 'point', index: pendingPointIndex })
     } else if (pendingPick) {
-      const ref = pendingPick.userData.studioRef
-      if (ref?.kind === 'racer') {
-        const index = Number(ref.id.slice('racer:'.length))
-        if (Number.isFinite(index) && index === 0) studioHost.setSelection({ kind: 'player' })
+      const wheelIndex = pendingPick.userData.wheelIndex
+      const racerIndex = pendingPick.userData.racerIndex
+      if (typeof wheelIndex === 'number' && racerIndex === 0) {
+        studioHost.setSelection({ kind: 'wheel', index: wheelIndex })
       } else {
-        const entityId =
-          ref?.kind === 'entity'
-            ? ref.id
-            : pendingPick.name.replace(/^entity:/, '').replace(/^collider-pick:/, '')
-        if (entityId) studioHost.setSelection({ kind: 'entity', id: entityId })
+        const ref = pendingPick.userData.studioRef
+        if (ref?.kind === 'racer') {
+          const index = Number(ref.id.slice('racer:'.length))
+          if (Number.isFinite(index) && index === 0) studioHost.setSelection({ kind: 'player' })
+        } else {
+          const entityId =
+            ref?.kind === 'entity'
+              ? ref.id
+              : pendingPick.name.replace(/^entity:/, '').replace(/^collider-pick:/, '')
+          if (entityId) studioHost.setSelection({ kind: 'entity', id: entityId })
+        }
       }
     }
 
@@ -626,7 +636,7 @@ function frame(now: number): void {
     updateCamera(dt)
   }
 
-  physicsDebug?.sync(world)
+  physicsDebug?.sync(world, selection?.kind === 'wheel' ? selection.index : undefined)
   renderer.render(scene, camera)
   dev?.afterRender(now)
   studioDrawer?.updateInspect()
@@ -776,6 +786,9 @@ async function boot(): Promise<void> {
       notifyDoc()
       void applyVisuals()
       studioDrawer?.syncTuneTarget()
+    },
+    reconfigurePlayerWheels: () => {
+      world?.reconfigureWheels(0)
     },
   })
   physicsDebug?.setEnabled(studioDrawer.getSettings().showPhysicsDebug)

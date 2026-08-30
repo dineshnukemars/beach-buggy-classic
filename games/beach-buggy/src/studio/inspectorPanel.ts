@@ -19,6 +19,7 @@ export function createInspectorPanel(host: HTMLElement, studio: StudioHost): voi
       <h3 id="studio-tune-title">Physics tuning</h3>
       <p class="studio-note" id="studio-vehicle-note">Edit mode or pause physics to tune.</p>
       <div id="studio-vehicle"></div>
+      <div id="studio-wheel-tune" class="hidden"></div>
       <div id="studio-entity-tune" class="hidden"></div>
     </section>
   `
@@ -55,10 +56,15 @@ export function createInspectorPanel(host: HTMLElement, studio: StudioHost): voi
     }
     if (sel?.kind === 'player') {
       body.innerHTML =
-        '<h2>Player vehicle</h2><p class="studio-note">Use the Tune tab for mesh opacity, visual offset, and chassis offset. Collider wireframes are shown when Physics colliders is enabled.</p>'
+        '<h2>Player vehicle</h2><p class="studio-note">Use the Tune tab for mesh opacity, visual offset, and chassis offset. Click a wheel collider to adjust its placement.</p>'
       return
     }
-    body.innerHTML = '<p class="studio-note">Select a track point, entity, or the player car in Edit mode.</p>'
+    if (sel?.kind === 'wheel') {
+      const labels = ['Front left', 'Front right', 'Rear left', 'Rear right']
+      body.innerHTML = `<h2>Wheel: ${labels[sel.index] ?? `#${sel.index}`}</h2><p class="studio-note">Use the Tune tab to adjust this wheel's offset, radius, and suspension. Other wheels stay unchanged.</p>`
+      return
+    }
+    body.innerHTML = '<p class="studio-note">Select a track point, entity, player car, or wheel collider in Edit mode.</p>'
   }
 
   studio.onSelectionChange(refresh)

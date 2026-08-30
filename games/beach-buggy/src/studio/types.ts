@@ -19,6 +19,7 @@ export type StudioHost = {
   isKeyDown: (code: string) => boolean
   getPickTargets: () => THREE.Object3D[]
   getPlayerObject: () => THREE.Object3D | null
+  getWheelHubPosition: (wheelIndex: number) => THREE.Vector3 | null
   onDocChange: (fn: () => void) => () => void
   onSelectionChange: (fn: () => void) => () => void
   onManifestChange: (fn: () => void) => () => void

@@ -47,6 +47,7 @@ export type StudioDrawerHost = {
   getSelection: () => Selection
   getDoc: () => import('@studio/core').SceneDocument
   patchSelectedEntity: (patch: (entity: SceneEntity) => SceneEntity) => void
+  reconfigurePlayerWheels: () => void
 }
 
 type SliderSpec = {
@@ -70,6 +71,26 @@ const LIGHT_SLIDERS: SliderSpec[] = [
   { key: 'sunIntensity', label: 'Sun', min: 0, max: 3, step: 0.05 },
   { key: 'sunAzimuth', label: 'Sun azimuth', min: 0, max: 360, step: 1, format: (v) => `${Math.round(v)}°` },
   { key: 'sunElevation', label: 'Sun elevation', min: 5, max: 89, step: 1, format: (v) => `${Math.round(v)}°` },
+]
+
+const WHEEL_LABELS = ['Front left', 'Front right', 'Rear left', 'Rear right'] as const
+
+type WheelTuneField = 'offsetX' | 'offsetZ' | 'radius' | 'restLength' | 'maxTravel'
+
+type WheelTuneSpec = {
+  field: WheelTuneField
+  label: string
+  min: number
+  max: number
+  step: number
+}
+
+const WHEEL_TUNE_SLIDERS: WheelTuneSpec[] = [
+  { field: 'offsetX', label: 'Hub offset X', min: -2, max: 2, step: 0.02 },
+  { field: 'offsetZ', label: 'Hub offset Z', min: -2, max: 2, step: 0.02 },
+  { field: 'radius', label: 'Wheel radius', min: 0.12, max: 0.75, step: 0.01 },
+  { field: 'restLength', label: 'Suspension rest', min: 0.1, max: 0.9, step: 0.01 },
+  { field: 'maxTravel', label: 'Suspension travel', min: 0.05, max: 0.45, step: 0.01 },
 ]
 
 const VEHICLE_SLIDERS: SliderSpec[] = [
@@ -140,6 +161,7 @@ export function createStudioDrawer(host: StudioDrawerHost) {
   const vehicleNote = document.querySelector<HTMLElement>('#studio-vehicle-note')
   const tuneTitle = document.querySelector<HTMLElement>('#studio-tune-title')
   const vehicleSection = document.querySelector<HTMLElement>('#studio-vehicle')
+  const wheelTuneSection = document.querySelector<HTMLElement>('#studio-wheel-tune')
   const entityTuneSection = document.querySelector<HTMLElement>('#studio-entity-tune')
 
   const settingsBaseline = loadStudioSettings(host.defaultMaxSpeed, host.defaultChassisOffsetY)
@@ -155,6 +177,8 @@ export function createStudioDrawer(host: StudioDrawerHost) {
   const valueEls = new Map<keyof StudioSettings, HTMLElement>()
   const entitySliderEls = new Map<EntityTuneField, HTMLInputElement>()
   const entityValueEls = new Map<EntityTuneField, HTMLElement>()
+  const wheelSliderEls = new Map<WheelTuneField, HTMLInputElement>()
+  const wheelValueEls = new Map<WheelTuneField, HTMLElement>()
   let entityTuneValues: Record<EntityTuneField, number> = {
     opacity: 1,
     offsetX: 0,
@@ -281,19 +305,74 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     }
   }
 
+  function wheelFieldValue(wheelIndex: number, field: WheelTuneField): number {
+    return host.getTuning().wheels[wheelIndex]?.[field] ?? 0
+  }
+
+  function applyWheelTune(wheelIndex: number, field: WheelTuneField, value: number): void {
+    const wheels = host.getTuning().wheels
+    const wheel = wheels[wheelIndex]
+    if (!wheel) return
+    wheels[wheelIndex] = { ...wheel, [field]: value }
+    host.reconfigurePlayerWheels()
+  }
+
+  function bindWheelTuneSlider(section: HTMLElement, spec: WheelTuneSpec): void {
+    const row = document.createElement('label')
+    row.className = 'studio-row'
+    const name = document.createElement('span')
+    name.textContent = spec.label
+    const input = document.createElement('input')
+    input.type = 'range'
+    input.min = String(spec.min)
+    input.max = String(spec.max)
+    input.step = String(spec.step)
+    input.dataset.wheelTune = '1'
+    const val = document.createElement('span')
+    val.className = 'studio-val'
+    row.append(name, input, val)
+    section.append(row)
+    input.addEventListener('input', () => {
+      if (input.disabled) return
+      const sel = host.getSelection()
+      if (sel?.kind !== 'wheel') return
+      const num = Number(input.value)
+      val.textContent = String(num)
+      applyWheelTune(sel.index, spec.field, num)
+    })
+    wheelSliderEls.set(spec.field, input)
+    wheelValueEls.set(spec.field, val)
+  }
+
+  function syncWheelTuneSliders(wheelIndex: number | undefined): void {
+    if (wheelIndex === undefined) return
+    for (const spec of WHEEL_TUNE_SLIDERS) {
+      const v = wheelFieldValue(wheelIndex, spec.field)
+      const input = wheelSliderEls.get(spec.field)
+      const valEl = wheelValueEls.get(spec.field)
+      if (!input || !valEl) continue
+      input.value = String(v)
+      valEl.textContent = String(v)
+    }
+  }
+
   function syncTuneTarget(): void {
     const sel = host.getSelection()
     const entity =
       sel?.kind === 'entity' ? host.getDoc().entities.find((e) => e.id === sel.id) : undefined
     const showEntity = Boolean(entity)
-    vehicleSection?.classList.toggle('hidden', showEntity)
+    const showWheel = sel?.kind === 'wheel'
+    vehicleSection?.classList.toggle('hidden', showEntity || showWheel)
+    wheelTuneSection?.classList.toggle('hidden', !showWheel)
     entityTuneSection?.classList.toggle('hidden', !showEntity)
     if (tuneTitle) {
       if (showEntity) tuneTitle.textContent = `Entity: ${entity!.id}`
+      else if (showWheel) tuneTitle.textContent = `Wheel: ${WHEEL_LABELS[sel!.index] ?? sel!.index}`
       else if (sel?.kind === 'player') tuneTitle.textContent = 'Player vehicle'
       else tuneTitle.textContent = 'Player vehicle'
     }
     if (showEntity) syncEntityTuneSliders(entity)
+    if (showWheel) syncWheelTuneSliders(sel.index)
     syncVehicleTuneGate()
   }
 
@@ -336,6 +415,9 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     if (entityTuneSection) {
       for (const spec of ENTITY_TUNE_SLIDERS) bindEntityTuneSlider(entityTuneSection, spec)
     }
+    if (wheelTuneSection) {
+      for (const spec of WHEEL_TUNE_SLIDERS) bindWheelTuneSlider(wheelTuneSection, spec)
+    }
   }
 
   function vehicleTuneEnabled(): boolean {
@@ -346,15 +428,23 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     const enabled = vehicleTuneEnabled()
     const sel = host.getSelection()
     const tuningEntity = sel?.kind === 'entity'
+    const tuningWheel = sel?.kind === 'wheel'
     for (const [key, input] of sliderEls) {
       if (!VEHICLE_SLIDERS.some((s) => s.key === key)) continue
-      input.disabled = !enabled || tuningEntity
+      input.disabled = !enabled || tuningEntity || tuningWheel
     }
     for (const input of entitySliderEls.values()) {
       input.disabled = !enabled || !tuningEntity
     }
+    for (const input of wheelSliderEls.values()) {
+      input.disabled = !enabled || !tuningWheel
+    }
     if (vehicleNote) {
-      if (tuningEntity) {
+      if (tuningWheel) {
+        vehicleNote.textContent = enabled
+          ? 'Adjusting one wheel — others stay fixed. Switch to Play to race-test.'
+          : 'Edit mode or pause physics to tune.'
+      } else if (tuningEntity) {
         vehicleNote.textContent = enabled
           ? 'Collider changes apply on Play.'
           : 'Edit mode or pause physics to tune.'

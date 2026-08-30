@@ -24,6 +24,7 @@ export function createPhysicsDebugLayer(scene: THREE.Scene) {
   const wheelGeo = new THREE.SphereGeometry(1, 10, 8)
   const wheelMatContact = new THREE.MeshBasicMaterial({ color: 0x55ff88, wireframe: true })
   const wheelMatAir = new THREE.MeshBasicMaterial({ color: 0xffaa44, wireframe: true })
+  const wheelMatSelected = new THREE.MeshBasicMaterial({ color: 0xffee33, wireframe: true })
   const wheelPickMat = new THREE.MeshBasicMaterial({
     transparent: true,
     opacity: 0,
@@ -42,7 +43,7 @@ export function createPhysicsDebugLayer(scene: THREE.Scene) {
     wheelPickPool.length = 0
   }
 
-  function sync(world: World | undefined): void {
+  function sync(world: World | undefined, selectedWheelIndex?: number): void {
     if (!root.visible) return
     if (!world || world.backend !== 'rapier') {
       colliderLines?.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3))
@@ -90,12 +91,21 @@ export function createPhysicsDebugLayer(scene: THREE.Scene) {
       const hub = hubs[i]!
       const mesh = wheelPool[i]!
       const pick = wheelPickPool[i]!
-      mesh.material = hub.contact ? wheelMatContact : wheelMatAir
+      const selected = hub.racerIndex === 0 && hub.wheelIndex === selectedWheelIndex
+      mesh.material = selected
+        ? wheelMatSelected
+        : hub.contact
+          ? wheelMatContact
+          : wheelMatAir
       mesh.position.set(hub.position[0], hub.position[1], hub.position[2])
       mesh.scale.setScalar(hub.radius)
+      mesh.userData.wheelIndex = hub.wheelIndex
+      mesh.userData.racerIndex = hub.racerIndex
       pick.position.copy(mesh.position)
       pick.scale.copy(mesh.scale)
       pick.name = `wheel-pick:racer:${hub.racerIndex}:${hub.wheelIndex}`
+      pick.userData.wheelIndex = hub.wheelIndex
+      pick.userData.racerIndex = hub.racerIndex
       tagStudioRef(pick, {
         kind: 'racer',
         id: `racer:${hub.racerIndex}`,
@@ -106,7 +116,7 @@ export function createPhysicsDebugLayer(scene: THREE.Scene) {
   }
 
   function getPickMeshes(): THREE.Mesh[] {
-    return wheelPickPool
+    return [...wheelPickPool, ...wheelPool]
   }
 
   function onWorldReset(): void {
@@ -124,6 +134,7 @@ export function createPhysicsDebugLayer(scene: THREE.Scene) {
     wheelGeo.dispose()
     wheelMatContact.dispose()
     wheelMatAir.dispose()
+    wheelMatSelected.dispose()
     wheelPickMat.dispose()
     scene.remove(root)
   }

@@ -329,6 +329,7 @@ export function createEditOverlay(
       if (typeof obj.userData.pointIndex === 'number') return obj
       if (obj.userData.studioRef?.kind === 'entity') return obj
       if (obj.userData.studioRef?.kind === 'racer') return obj
+      if (typeof obj.userData.wheelIndex === 'number' && obj.userData.racerIndex === 0) return obj
       if (obj.name.startsWith('entity:') || obj.name.startsWith('collider-pick:')) return obj
       if (obj.name.startsWith('wheel-pick:')) return obj
       obj = obj.parent
@@ -375,6 +376,10 @@ export function createEditOverlay(
       if (bounds.isEmpty()) playerObj.getWorldPosition(focusPoint)
       else bounds.getCenter(focusPoint)
       focusObj = playerObj
+    } else if (selection.kind === 'wheel') {
+      const hub = host.getWheelHubPosition(selection.index)
+      if (!hub) return
+      focusPoint.copy(hub)
     }
 
     camera.getWorldDirection(focusViewDir)

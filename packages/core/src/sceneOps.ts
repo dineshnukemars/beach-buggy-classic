@@ -5,6 +5,7 @@ export type Selection =
   | { kind: 'point'; index: number }
   | { kind: 'entity'; id: string }
   | { kind: 'player' }
+  | { kind: 'wheel'; index: number }
   | null
 
 export function cloneDoc(doc: SceneDocument): SceneDocument {

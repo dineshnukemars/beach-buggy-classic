@@ -572,6 +572,14 @@ export class RapierSimulation {
     this.configureWheels(racer.controller)
   }
 
+  reconfigureWheels(racerIndex: number): void {
+    const racer = this.racers[racerIndex]
+    if (!racer) return
+    this.world.removeVehicleController(racer.controller)
+    racer.controller = this.world.createVehicleController(racer.body)
+    this.configureWheels(racer.controller)
+  }
+
   private configureWheels(controller: RAPIER.DynamicRayCastVehicleController): void {
     for (let i = 0; i < this.tuning.wheels.length; i++) {
       const wheel = this.tuning.wheels[i]!

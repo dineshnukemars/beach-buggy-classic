@@ -211,6 +211,10 @@ export class World {
     return this.rapier?.drainEvents() ?? []
   }
 
+  reconfigureWheels(racerIndex: number): void {
+    this.rapier?.reconfigureWheels(racerIndex)
+  }
+
   dispose(): void {
     this.rapier?.dispose()
     this.rapier = undefined
