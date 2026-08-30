@@ -12,3 +12,4 @@ tools/pipeline-smoke/.tmp/
 packages/physics/.tmp/
 test-results/
 playwright-report/
+/.idea/
