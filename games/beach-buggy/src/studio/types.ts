@@ -15,6 +15,8 @@ export type StudioHost = {
   setSelection: (sel: Selection) => void
   getMode: () => StudioMode
   setMode: (mode: StudioMode) => Promise<void>
+  isOrbitFree: () => boolean
+  isKeyDown: (code: string) => boolean
   onDocChange: (fn: () => void) => () => void
   onSelectionChange: (fn: () => void) => () => void
   onManifestChange: (fn: () => void) => () => void

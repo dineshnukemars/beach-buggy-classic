@@ -16,9 +16,10 @@ export function createInspectorPanel(host: HTMLElement, studio: StudioHost): voi
   tuneMount.id = 'studio-tune-mount'
   tuneMount.innerHTML = `
     <section class="studio-section">
-      <h3>Player vehicle</h3>
+      <h3 id="studio-tune-title">Physics tuning</h3>
       <p class="studio-note" id="studio-vehicle-note">Edit mode or pause physics to tune.</p>
       <div id="studio-vehicle"></div>
+      <div id="studio-entity-tune" class="hidden"></div>
     </section>
   `
 

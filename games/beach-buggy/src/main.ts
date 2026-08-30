@@ -306,6 +306,14 @@ async function reloadManifest(): Promise<void> {
   notifyManifest()
 }
 
+function devOrbitActive(): boolean {
+  return import.meta.env.DEV && (studioMode === 'edit' || Boolean(studioDrawer?.isPaused()))
+}
+
+function syncDevOrbit(): void {
+  editOverlay?.setOrbitEnabled(devOrbitActive())
+}
+
 const studioHost: StudioHost = {
   getDoc: () => sceneDoc,
   setDoc: (doc, opts) => {
@@ -331,11 +339,19 @@ const studioHost: StudioHost = {
     selection = sel
     notifySel()
     editOverlay?.update(sceneDoc, selection, studioMode === 'edit')
+    if (studioMode === 'edit') editOverlay?.focusSelection(sceneDoc, selection)
+    studioDrawer?.syncTuneTarget()
   },
   getMode: () => studioMode,
+  isOrbitFree: () => devOrbitActive(),
+  isKeyDown: (code) =>
+    keys.has(code) && !dev?.isTyping() && !studioDrawer?.isTyping() && !isPanelField(document.activeElement),
   setMode: async (mode) => {
     studioMode = mode
     editOverlay?.setVisible(mode === 'edit')
+    updateControlsHint()
+    syncDevOrbit()
+    studioDrawer?.syncTuneTarget()
     studioDrawer?.syncVehicleTuneGate()
     if (mode === 'play') {
       await applySim()
@@ -416,7 +432,7 @@ function restartRace(): void {
 startBtn.addEventListener('click', () => void startRace())
 
 function updateCamera(dt: number): void {
-  if (studioMode === 'edit') return
+  if (devOrbitActive()) return
   const body = world?.bodies[0]
   if (!body) return
   const s = studioDrawer?.getSettings()
@@ -448,35 +464,52 @@ function stepPhysicsFrame(frameDt: number, inputs: ReturnType<typeof playerInput
 }
 
 let draggingPoint: number | null = null
+const PICK_DRAG_PX = 6
+
+function updateControlsHint(): void {
+  const el = document.querySelector('#controls-hint')
+  if (!el) return
+  if (import.meta.env.DEV && studioMode === 'edit') {
+    el.textContent =
+      'WASD move · Shift sprint · Q/E up/down · Left-drag orbit · Scroll zoom · Right-drag pan · Click select'
+  } else if (import.meta.env.DEV && studioDrawer?.isPaused()) {
+    el.textContent = 'Paused · WASD move · Shift sprint · Left-drag orbit · Scroll zoom · Right-drag pan'
+  } else {
+    el.textContent = 'Arrows / WASD · Space boost · R restart · F8 report'
+  }
+}
 
 function bindEditCanvas(): void {
   if (!import.meta.env.DEV || !editOverlay) return
 
+  let pointerDown: { x: number; y: number } | null = null
+  let pendingPick: THREE.Object3D | null = null
+  let pendingPointIndex: number | null = null
+
   canvas.addEventListener('pointerdown', (e) => {
     if (studioMode !== 'edit' || e.button !== 0) return
     if (editOverlay!.getTransform().dragging) return
-    const assetId = undefined
-    if (assetId) return
+    pointerDown = { x: e.clientX, y: e.clientY }
     const picked = editOverlay!.pickObject(e.clientX, e.clientY)
-    if (!picked) return
-    if (typeof picked.userData.pointIndex === 'number') {
-      selection = { kind: 'point', index: picked.userData.pointIndex }
-      draggingPoint = selection.index
-      notifySel()
-      editOverlay!.update(sceneDoc, selection, true)
-      e.preventDefault()
-      return
-    }
-    const ref = picked.userData.studioRef
-    const entityId = ref?.kind === 'entity' ? ref.id : picked.name.replace(/^entity:/, '')
-    if (entityId) {
-      selection = { kind: 'entity', id: entityId }
-      notifySel()
-      editOverlay!.update(sceneDoc, selection, true)
+    if (picked && typeof picked.userData.pointIndex === 'number') {
+      pendingPointIndex = picked.userData.pointIndex
+      pendingPick = null
+    } else {
+      pendingPointIndex = null
+      pendingPick = picked
     }
   })
 
   canvas.addEventListener('pointermove', (e) => {
+    if (pointerDown && pendingPointIndex !== null && draggingPoint === null) {
+      const dist = Math.hypot(e.clientX - pointerDown.x, e.clientY - pointerDown.y)
+      if (dist > PICK_DRAG_PX) {
+        draggingPoint = pendingPointIndex
+        studioHost.setSelection({ kind: 'point', index: draggingPoint })
+        editOverlay!.setOrbitEnabled(false)
+        pendingPointIndex = null
+      }
+    }
     if (draggingPoint === null || studioMode !== 'edit') return
     const hit = editOverlay!.groundHit(e.clientX, e.clientY)
     if (!hit || !sceneDoc.track) return
@@ -487,13 +520,51 @@ function bindEditCanvas(): void {
     editOverlay!.update(sceneDoc, selection, true)
   })
 
-  const endDrag = () => {
-    if (draggingPoint === null) return
-    draggingPoint = null
-    void applyVisuals()
+  const endPointer = (e: PointerEvent) => {
+    syncDevOrbit()
+
+    if (draggingPoint !== null) {
+      draggingPoint = null
+      void applyVisuals()
+      pointerDown = null
+      pendingPick = null
+      pendingPointIndex = null
+      return
+    }
+
+    if (studioMode !== 'edit' || e.button !== 0 || !pointerDown) {
+      pointerDown = null
+      pendingPick = null
+      pendingPointIndex = null
+      return
+    }
+
+    const dist = Math.hypot(e.clientX - pointerDown.x, e.clientY - pointerDown.y)
+    if (dist > PICK_DRAG_PX) {
+      pointerDown = null
+      pendingPick = null
+      pendingPointIndex = null
+      return
+    }
+
+    if (pendingPointIndex !== null) {
+      studioHost.setSelection({ kind: 'point', index: pendingPointIndex })
+    } else if (pendingPick) {
+      const ref = pendingPick.userData.studioRef
+      const entityId =
+        ref?.kind === 'entity'
+          ? ref.id
+          : pendingPick.name.replace(/^entity:/, '').replace(/^collider-pick:/, '')
+      if (entityId) studioHost.setSelection({ kind: 'entity', id: entityId })
+    }
+
+    pointerDown = null
+    pendingPick = null
+    pendingPointIndex = null
   }
-  canvas.addEventListener('pointerup', endDrag)
-  canvas.addEventListener('pointercancel', endDrag)
+
+  canvas.addEventListener('pointerup', endPointer)
+  canvas.addEventListener('pointercancel', endPointer)
 }
 
 let last = performance.now()
@@ -635,6 +706,7 @@ async function boot(): Promise<void> {
     editOverlay = createEditOverlay(scene, camera, canvas, studioHost)
     editOverlay.setVisible(studioMode === 'edit')
     bindEditCanvas()
+    updateControlsHint()
     physicsDebug = createPhysicsDebugLayer(scene)
     const ui = initStudioUi(studioHost, canvas, editOverlay)
     ui.shell?.observeStage(setViewport)
@@ -648,6 +720,7 @@ async function boot(): Promise<void> {
     await applyVisuals()
     camera.position.set(0, 90, 110)
     camera.lookAt(0, 0, 0)
+    editOverlay?.syncOrbitFromCamera()
   }
 
   studioDrawer = createStudioDrawer({
@@ -673,6 +746,25 @@ async function boot(): Promise<void> {
     applyPlayerVehicleVisual,
     lookback,
     setPhysicsDebug: (on) => physicsDebug?.setEnabled(on),
+    getSelection: () => selection,
+    getDoc: () => sceneDoc,
+    onSimPauseChange: () => {
+      syncDevOrbit()
+      updateControlsHint()
+    },
+    patchSelectedEntity: (patch) => {
+      if (selection?.kind !== 'entity') return
+      const entity = sceneDoc.entities.find((e) => e.id === selection.id)
+      if (!entity) return
+      const next = patch(entity)
+      sceneDoc = { ...sceneDoc, entities: [...sceneDoc.entities.filter((e) => e.id !== entity.id), next] }
+      if (selection.id !== next.id) {
+        studioHost.setSelection({ kind: 'entity', id: next.id })
+      }
+      notifyDoc()
+      void applyVisuals()
+      studioDrawer?.syncTuneTarget()
+    },
   })
   physicsDebug?.setEnabled(studioDrawer.getSettings().showPhysicsDebug)
   dev = createDevMode({

@@ -76,13 +76,3 @@ export function saveStudioSettings(settings: StudioSettings): void {
     /* quota or private mode */
   }
 }
-
-export function resetStudioSettings(tuningMaxSpeed?: number, chassisOffsetY?: number): StudioSettings {
-  const settings = {
-    ...DEFAULT_STUDIO_SETTINGS,
-    maxSpeed: tuningMaxSpeed ?? DEFAULT_STUDIO_SETTINGS.maxSpeed,
-    chassisOffsetY: chassisOffsetY ?? DEFAULT_STUDIO_SETTINGS.chassisOffsetY,
-  }
-  saveStudioSettings(settings)
-  return settings
-}

@@ -4,6 +4,8 @@ import {
   serializePoseHistory,
   upsertAsset,
   type FeedbackReport,
+  type SceneEntity,
+  type Selection,
   type Vec3Tuple,
 } from '@studio/core'
 import type { VehicleTuning, World } from '@studio/physics'
@@ -15,7 +17,6 @@ import { isPanelField } from './panel'
 import { blobToBase64, submitFeedback } from './submit'
 import {
   loadStudioSettings,
-  resetStudioSettings,
   saveStudioSettings,
   sunPositionFromSettings,
   type StudioSettings,
@@ -42,6 +43,10 @@ export type StudioDrawerHost = {
   applyPlayerVehicleVisual: () => void
   lookback: LookbackBuffer
   setPhysicsDebug?: (on: boolean) => void
+  onSimPauseChange?: () => void
+  getSelection: () => Selection
+  getDoc: () => import('@studio/core').SceneDocument
+  patchSelectedEntity: (patch: (entity: SceneEntity) => SceneEntity) => void
 }
 
 type SliderSpec = {
@@ -82,6 +87,41 @@ const VEHICLE_SLIDERS: SliderSpec[] = [
   { key: 'chassisOffsetY', label: 'Chassis offset Y', min: 0, max: 1.5, step: 0.01 },
 ]
 
+type EntityTuneField =
+  | 'opacity'
+  | 'offsetX'
+  | 'offsetY'
+  | 'offsetZ'
+  | 'halfX'
+  | 'halfY'
+  | 'halfZ'
+
+type EntityTuneSpec = {
+  field: EntityTuneField
+  label: string
+  min: number
+  max: number
+  step: number
+  format?: (v: number) => string
+}
+
+const ENTITY_TUNE_SLIDERS: EntityTuneSpec[] = [
+  {
+    field: 'opacity',
+    label: 'Opacity',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
+  { field: 'offsetX', label: 'Collider offset X', min: -3, max: 3, step: 0.05 },
+  { field: 'offsetY', label: 'Collider offset Y', min: -3, max: 3, step: 0.05 },
+  { field: 'offsetZ', label: 'Collider offset Z', min: -3, max: 3, step: 0.05 },
+  { field: 'halfX', label: 'Half X', min: 0.05, max: 5, step: 0.05 },
+  { field: 'halfY', label: 'Half Y', min: 0.05, max: 5, step: 0.05 },
+  { field: 'halfZ', label: 'Half Z', min: 0.05, max: 5, step: 0.05 },
+]
+
 export function createStudioDrawer(host: StudioDrawerHost) {
   const toggle = document.querySelector<HTMLButtonElement>('#studio-toggle')
   const drawer = document.querySelector<HTMLElement>('#studio-drawer')!
@@ -98,8 +138,12 @@ export function createStudioDrawer(host: StudioDrawerHost) {
   const saveClipBtn = document.querySelector<HTMLButtonElement>('#studio-save-clip')!
   const recordStatus = document.querySelector<HTMLElement>('#studio-record-status')!
   const vehicleNote = document.querySelector<HTMLElement>('#studio-vehicle-note')
+  const tuneTitle = document.querySelector<HTMLElement>('#studio-tune-title')
+  const vehicleSection = document.querySelector<HTMLElement>('#studio-vehicle')
+  const entityTuneSection = document.querySelector<HTMLElement>('#studio-entity-tune')
 
-  let settings = loadStudioSettings(host.defaultMaxSpeed, host.defaultChassisOffsetY)
+  const settingsBaseline = loadStudioSettings(host.defaultMaxSpeed, host.defaultChassisOffsetY)
+  let settings = { ...settingsBaseline }
   let open = false
   let paused = false
   let recorder: MediaRecorder | undefined
@@ -109,6 +153,17 @@ export function createStudioDrawer(host: StudioDrawerHost) {
 
   const sliderEls = new Map<keyof StudioSettings, HTMLInputElement>()
   const valueEls = new Map<keyof StudioSettings, HTMLElement>()
+  const entitySliderEls = new Map<EntityTuneField, HTMLInputElement>()
+  const entityValueEls = new Map<EntityTuneField, HTMLElement>()
+  let entityTuneValues: Record<EntityTuneField, number> = {
+    opacity: 1,
+    offsetX: 0,
+    offsetY: 0,
+    offsetZ: 0,
+    halfX: 0.5,
+    halfY: 0.5,
+    halfZ: 0.5,
+  }
 
   function bindSlider(section: HTMLElement, spec: SliderSpec, onInput?: () => void): void {
     const row = document.createElement('label')
@@ -140,6 +195,106 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     valueEls.set(spec.key, val)
   }
 
+  function entityFieldValue(entity: SceneEntity | undefined, field: EntityTuneField): number {
+    if (!entity) return entityTuneValues[field]
+    const off = entity.collider?.offset ?? [0, 0, 0]
+    const half = entity.collider?.halfExtents ?? [0.5, 0.5, 0.5]
+    switch (field) {
+      case 'opacity':
+        return entity.opacity ?? 1
+      case 'offsetX':
+        return off[0]
+      case 'offsetY':
+        return off[1]
+      case 'offsetZ':
+        return off[2]
+      case 'halfX':
+        return half[0]
+      case 'halfY':
+        return half[1]
+      case 'halfZ':
+        return half[2]
+    }
+  }
+
+  function applyEntityTune(field: EntityTuneField, value: number): void {
+    host.patchSelectedEntity((entity) => {
+      const off: Vec3Tuple = [...(entity.collider?.offset ?? [0, 0, 0])]
+      const half: Vec3Tuple = [...(entity.collider?.halfExtents ?? [0.5, 0.5, 0.5])]
+      let opacity = entity.opacity ?? 1
+      if (field === 'opacity') opacity = value
+      if (field === 'offsetX') off[0] = value
+      if (field === 'offsetY') off[1] = value
+      if (field === 'offsetZ') off[2] = value
+      if (field === 'halfX') half[0] = value
+      if (field === 'halfY') half[1] = value
+      if (field === 'halfZ') half[2] = value
+      entityTuneValues[field] = value
+      return {
+        ...entity,
+        opacity,
+        collider: {
+          type: 'box',
+          halfExtents: half,
+          ...(off.some((n) => n !== 0) ? { offset: off } : {}),
+        },
+      }
+    })
+  }
+
+  function bindEntityTuneSlider(section: HTMLElement, spec: EntityTuneSpec): void {
+    const row = document.createElement('label')
+    row.className = 'studio-row'
+    const name = document.createElement('span')
+    name.textContent = spec.label
+    const input = document.createElement('input')
+    input.type = 'range'
+    input.min = String(spec.min)
+    input.max = String(spec.max)
+    input.step = String(spec.step)
+    input.value = String(entityTuneValues[spec.field])
+    input.dataset.entityTune = '1'
+    const val = document.createElement('span')
+    val.className = 'studio-val'
+    val.textContent = spec.format ? spec.format(entityTuneValues[spec.field]) : String(entityTuneValues[spec.field])
+    input.addEventListener('input', () => {
+      if (input.disabled) return
+      const num = Number(input.value)
+      val.textContent = spec.format ? spec.format(num) : String(num)
+      applyEntityTune(spec.field, num)
+    })
+    row.append(name, input, val)
+    section.append(row)
+    entitySliderEls.set(spec.field, input)
+    entityValueEls.set(spec.field, val)
+  }
+
+  function syncEntityTuneSliders(entity: SceneEntity | undefined): void {
+    for (const spec of ENTITY_TUNE_SLIDERS) {
+      const v = entityFieldValue(entity, spec.field)
+      entityTuneValues[spec.field] = v
+      const input = entitySliderEls.get(spec.field)
+      const valEl = entityValueEls.get(spec.field)
+      if (!input || !valEl) continue
+      input.value = String(v)
+      valEl.textContent = spec.format ? spec.format(v) : String(v)
+    }
+  }
+
+  function syncTuneTarget(): void {
+    const sel = host.getSelection()
+    const entity =
+      sel?.kind === 'entity' ? host.getDoc().entities.find((e) => e.id === sel.id) : undefined
+    const showEntity = Boolean(entity)
+    vehicleSection?.classList.toggle('hidden', showEntity)
+    entityTuneSection?.classList.toggle('hidden', !showEntity)
+    if (tuneTitle) {
+      tuneTitle.textContent = showEntity ? `Entity: ${entity!.id}` : 'Player vehicle'
+    }
+    if (showEntity) syncEntityTuneSliders(entity)
+    syncVehicleTuneGate()
+  }
+
   function applyVehicleManifestOffset(): void {
     const offset: Vec3Tuple = [settings.visualOffsetX, settings.visualOffsetY, settings.visualOffsetZ]
     const buggy = host.getManifest().assets.find((a) => a.id === 'buggy')
@@ -161,10 +316,10 @@ export function createStudioDrawer(host: StudioDrawerHost) {
       step: 1,
       format: (v) => `${Math.round(v)} m/s`,
     })
-    const vehicleSection = document.querySelector<HTMLElement>('#studio-vehicle')
-    if (vehicleSection) {
+    const vehicleSectionEl = document.querySelector<HTMLElement>('#studio-vehicle')
+    if (vehicleSectionEl) {
       for (const spec of VEHICLE_SLIDERS) {
-        bindSlider(vehicleSection, spec, () => {
+        bindSlider(vehicleSectionEl, spec, () => {
           if (spec.key.startsWith('visualOffset')) {
             applyVehicleManifestOffset()
             host.applyPlayerVehicleVisual()
@@ -176,6 +331,9 @@ export function createStudioDrawer(host: StudioDrawerHost) {
         })
       }
     }
+    if (entityTuneSection) {
+      for (const spec of ENTITY_TUNE_SLIDERS) bindEntityTuneSlider(entityTuneSection, spec)
+    }
   }
 
   function vehicleTuneEnabled(): boolean {
@@ -184,14 +342,25 @@ export function createStudioDrawer(host: StudioDrawerHost) {
 
   function syncVehicleTuneGate(): void {
     const enabled = vehicleTuneEnabled()
+    const sel = host.getSelection()
+    const tuningEntity = sel?.kind === 'entity'
     for (const [key, input] of sliderEls) {
       if (!VEHICLE_SLIDERS.some((s) => s.key === key)) continue
-      input.disabled = !enabled
+      input.disabled = !enabled || tuningEntity
+    }
+    for (const input of entitySliderEls.values()) {
+      input.disabled = !enabled || !tuningEntity
     }
     if (vehicleNote) {
-      vehicleNote.textContent = enabled
-        ? 'Chassis offset Y needs Apply physics / switch to Play.'
-        : 'Edit mode or pause physics to tune.'
+      if (tuningEntity) {
+        vehicleNote.textContent = enabled
+          ? 'Collider changes apply on Play.'
+          : 'Edit mode or pause physics to tune.'
+      } else {
+        vehicleNote.textContent = enabled
+          ? 'Chassis offset Y needs Apply physics / switch to Play.'
+          : 'Edit mode or pause physics to tune.'
+      }
     }
   }
 
@@ -237,6 +406,7 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     pauseBtn.textContent = paused ? 'Resume physics' : 'Pause physics'
     pauseBtn.setAttribute('aria-pressed', paused ? 'true' : 'false')
     syncVehicleTuneGate()
+    host.onSimPauseChange?.()
   }
 
   function updateInspect(): void {
@@ -379,12 +549,13 @@ export function createStudioDrawer(host: StudioDrawerHost) {
   closeBtn?.addEventListener('click', () => setOpen(false))
   pauseBtn.addEventListener('click', () => setPaused(!paused))
   resetBtn.addEventListener('click', () => {
-    settings = resetStudioSettings(host.defaultMaxSpeed, host.defaultChassisOffsetY)
+    settings = { ...settingsBaseline }
+    saveStudioSettings(settings)
     syncSliders()
     applySettings()
     applyVehicleManifestOffset()
     host.applyPlayerVehicleVisual()
-    setRecordStatus('Settings reset')
+    setRecordStatus('Settings restored')
   })
   shadowsInput.addEventListener('change', () => {
     settings.shadows = shadowsInput.checked
@@ -406,6 +577,7 @@ export function createStudioDrawer(host: StudioDrawerHost) {
   applySettings()
   applyVehicleManifestOffset()
   host.applyPlayerVehicleVisual()
+  syncTuneTarget()
   recordStop.disabled = true
   recordDownload.disabled = true
   if (embedded) setOpen(true)
@@ -417,6 +589,7 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     isTyping: () => isPanelField(document.activeElement),
     updateInspect,
     syncVehicleTuneGate,
+    syncTuneTarget,
     dispose: () => {
       if (recorder?.state === 'recording') recorder.stop()
     },
