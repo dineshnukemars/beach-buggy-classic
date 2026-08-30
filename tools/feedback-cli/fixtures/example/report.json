@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "2026-08-28T143022-environment-env-palm-12",
+  "createdAt": "2026-08-28T14:30:22.000Z",
+  "issue": {
+    "tags": ["misaligned"],
+    "note": "palm sits in the road"
+  },
+  "target": {
+    "kind": "environment",
+    "id": "env:palm-12",
+    "label": "Palm tree",
+    "worldTransform": {
+      "position": [10, 0, 20],
+      "quaternion": [0, 0, 0, 1],
+      "scale": 1
+    }
+  },
+  "context": {
+    "sceneId": "beach-default",
+    "scenePath": "/scenes/default.json",
+    "phase": "racing",
+    "simClock": 12.4,
+    "player": {
+      "place": 2,
+      "lap": 1,
+      "speed": 18,
+      "airborneTime": 0,
+      "collisionCount": 1,
+      "offTrackDistance": 0.2,
+      "wheelContacts": [true, true, true, true]
+    },
+    "camera": {
+      "position": [0, 5, -10],
+      "quaternion": [0, 0, 0, 1]
+    },
+    "environment": {
+      "palmCount": 28,
+      "palmRadiusBase": 68,
+      "palmRadiusStep": 4,
+      "angleOffset": 0.2
+    }
+  },
+  "attachments": {
+    "screenshot": "screenshot.png",
+    "poseHistory": "pose-history.jsonl"
+  },
+  "agentHints": {
+    "likelyLayer": "code",
+    "files": ["games/beach-buggy/src/visuals.ts"]
+  }
+}

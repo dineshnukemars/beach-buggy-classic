@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beach Buggy Classic</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="hud">
+        <div id="hud-top">
+          <div id="place">1st</div>
+          <div id="lap">Lap 1 / 3</div>
+          <div id="speed">0 mph</div>
+        </div>
+        <div id="countdown"></div>
+        <div id="message"></div>
+        <div id="controls-hint">Arrows / WASD · Space boost · R restart · F8 report</div>
+        <button type="button" id="studio-toggle" aria-expanded="false">Dev</button>
+      </div>
+      <aside id="studio-drawer" class="hidden" aria-label="Studio settings">
+        <header class="studio-header">
+          <h2>Dev</h2>
+          <button type="button" id="studio-close" aria-label="Close">×</button>
+        </header>
+        <section class="studio-section">
+          <h3>Camera</h3>
+          <div id="studio-camera"></div>
+        </section>
+        <section class="studio-section">
+          <h3>Lighting</h3>
+          <div id="studio-lighting"></div>
+          <label class="studio-row studio-check">
+            <span>Shadows</span>
+            <input type="checkbox" id="studio-shadows" checked />
+          </label>
+        </section>
+        <section class="studio-section">
+          <h3>Handling</h3>
+          <div id="studio-handling"></div>
+        </section>
+        <section class="studio-section">
+          <h3>Inspect</h3>
+          <p id="studio-inspect">—</p>
+        </section>
+        <section class="studio-section">
+          <h3>Recording</h3>
+          <div class="studio-actions">
+            <button type="button" id="studio-record-start">Start</button>
+            <button type="button" id="studio-record-stop">Stop</button>
+            <button type="button" id="studio-record-download">Download</button>
+          </div>
+          <button type="button" id="studio-save-clip" class="studio-secondary">Save inspect clip</button>
+          <p id="studio-record-status"></p>
+        </section>
+        <section class="studio-section">
+          <h3>Utilities</h3>
+          <div class="studio-actions">
+            <button type="button" id="studio-pause">Pause physics</button>
+            <button type="button" id="studio-reset">Reset settings</button>
+          </div>
+        </section>
+      </aside>
+      <aside id="dev-panel" class="hidden" aria-label="Feedback report">
+        <h2>Report</h2>
+        <p id="dev-target">Click an object</p>
+        <fieldset id="dev-tags"></fieldset>
+        <label class="dev-note-label">Note
+          <textarea id="dev-note" rows="4" placeholder="What's wrong?"></textarea>
+        </label>
+        <div class="dev-actions">
+          <button type="button" id="dev-submit">Submit</button>
+          <button type="button" id="dev-resume">Resume</button>
+          <button type="button" id="dev-cancel">Cancel</button>
+        </div>
+        <p id="dev-status"></p>
+      </aside>
+      <div id="overlay" class="hidden">
+        <h1 id="overlay-title">Beach Buggy Classic</h1>
+        <p id="overlay-sub">One car on a flat plane.</p>
+        <button id="start-btn" type="button">Start</button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

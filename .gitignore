@@ -4,3 +4,11 @@ dist
 *.local
 .env
 .env.*
+games/*/public/assets/_ci/
+games/*/public/scenes/pipeline.json
+games/beach-buggy/feedback/*
+!games/beach-buggy/feedback/.gitkeep
+tools/pipeline-smoke/.tmp/
+packages/physics/.tmp/
+test-results/
+playwright-report/

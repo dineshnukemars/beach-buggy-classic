@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Map editor</title>
+    <style>
+      :root {
+        --bg: #0e141c;
+        --panel: #151d28;
+        --border: #2a3648;
+        --text: #e8eef6;
+        --muted: #8a9bb0;
+        --accent: #3d9cf0;
+        --danger: #e35d5d;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.4 ui-sans-serif, system-ui, sans-serif; }
+      body { display: grid; grid-template-columns: 320px 1fr 300px; grid-template-rows: 100%; height: 100%; min-height: 0; }
+      aside { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-right: 1px solid var(--border); background: var(--panel); overflow: auto; }
+      #inspector { border-right: none; border-left: 1px solid var(--border); }
+      h1 { margin: 0; font-size: 15px; font-weight: 650; }
+      h2 { margin: 10px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+      label { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-size: 11px; }
+      input, select, textarea, button {
+        font: inherit; color: var(--text); background: #0f1620; border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px;
+      }
+      input[type="range"] { padding: 0; }
+      button { cursor: pointer; }
+      button:hover { border-color: var(--accent); }
+      button.primary { background: #1a3a5c; border-color: var(--accent); }
+      button.danger { border-color: var(--danger); color: #ffc9c9; }
+      .row { display: flex; gap: 6px; flex-wrap: wrap; }
+      .row > * { flex: 1; }
+      #status { min-height: 1.4em; color: var(--muted); font-size: 12px; }
+      #status.err { color: #ff8f8f; }
+      #status.ok { color: #8fd49a; }
+      #palette, #entity-list, #scene-list { display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow: auto; }
+      .chip {
+        text-align: left; padding: 6px 8px; background: #121a24;
+      }
+      .chip.active { outline: 1px solid var(--accent); background: #1a2a3c; }
+#viewport { position: relative; min-width: 0; min-height: 0; height: 100%; }
+#c { width: 100%; height: 100%; display: block; touch-action: none; }
+      #hints {
+        position: absolute; left: 10px; bottom: 10px; color: var(--muted); font-size: 11px;
+        background: rgba(14, 20, 28, 0.75); padding: 6px 8px; border-radius: 4px; pointer-events: none;
+      }
+      #json { flex: 1; min-height: 180px; font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+      .note { color: var(--muted); font-size: 11px; }
+    </style>
+  </head>
+  <body>
+    <aside id="sidebar">
+      <h1>Map editor</h1>
+      <div id="status">Ready</div>
+      <label>Scene id <input id="scene-id" type="text" value="beach-default" /></label>
+      <div class="row">
+        <button id="btn-save" class="primary" type="button">Save</button>
+        <button id="btn-play" class="primary" type="button">Play</button>
+      </div>
+      <div class="row">
+        <button id="btn-download" type="button">Download</button>
+        <button id="btn-reload" type="button">Reload list</button>
+      </div>
+      <h2>Scenes on disk</h2>
+      <div id="scene-list"></div>
+      <h2>Track</h2>
+      <label>Half width <input id="half-width" type="range" min="2" max="20" step="0.5" value="7.5" /><span id="half-width-val">7.5</span></label>
+      <div class="row">
+        <button id="btn-add-point" type="button">Add point</button>
+        <button id="btn-del-point" class="danger" type="button">Delete point</button>
+      </div>
+      <h2>Assets</h2>
+      <p class="note">Manifest may only have ci-* test assets; missing glTF uses a placeholder box.</p>
+      <div id="palette"></div>
+      <h2>Entities</h2>
+      <div id="entity-list"></div>
+      <div class="row">
+        <button id="btn-place" type="button">Place mode</button>
+        <button id="btn-del-entity" class="danger" type="button">Delete entity</button>
+      </div>
+      <h2>JSON</h2>
+      <textarea id="json" spellcheck="false"></textarea>
+      <button id="btn-apply-json" type="button">Apply JSON</button>
+    </aside>
+    <div id="viewport">
+      <canvas id="c"></canvas>
+      <div id="hints">
+        Orbit: drag · Track points: click / drag · Entity: select then gizmo<br />
+        Place mode: click ground · Colliders only affect track-mode physics (not sandbox)
+      </div>
+    </div>
+    <aside id="inspector">
+      <h1>Inspector</h1>
+      <div id="inspector-body"><p class="note">Select a track point or entity.</p></div>
+    </aside>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

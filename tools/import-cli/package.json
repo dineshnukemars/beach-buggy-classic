@@ -1,0 +1,19 @@
+{
+  "name": "@studio/import-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/importFile.ts"
+  },
+  "scripts": {
+    "import": "tsx src/cli.ts",
+    "test": "node --import tsx --test src/validate.test.ts"
+  },
+  "dependencies": {
+    "@studio/core": "0.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.3"
+  }
+}

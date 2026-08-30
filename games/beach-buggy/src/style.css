@@ -1,0 +1,313 @@
+:root {
+  color-scheme: dark;
+  --sand: #e8c98a;
+  --ocean: #1a6b8a;
+  --accent: #ff6b2c;
+  --panel: rgba(12, 28, 40, 0.72);
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a1620;
+}
+
+#game { display: block; width: 100%; height: 100%; }
+
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+}
+
+#hud-top {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+#place { color: var(--accent); font-size: 1.75rem; }
+
+#countdown {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 5rem;
+  font-weight: 800;
+}
+
+#message {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+#controls-hint {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.85rem;
+  opacity: 0.75;
+  background: var(--panel);
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(255, 180, 80, 0.35), transparent 55%),
+    linear-gradient(180deg, rgba(10, 40, 60, 0.55), rgba(8, 20, 30, 0.88));
+  color: #fff;
+  text-align: center;
+  pointer-events: auto;
+}
+
+#overlay.hidden { display: none; }
+
+#dev-panel {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  pointer-events: auto;
+  color: #fff;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  z-index: 4;
+}
+
+#dev-panel.hidden { display: none; }
+
+#dev-panel h2 {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#dev-target { font-size: 0.9rem; opacity: 0.9; }
+
+#dev-tags {
+  border: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+#dev-tags label { cursor: pointer; }
+
+.dev-note-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+}
+
+#dev-note {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(8, 16, 24, 0.7);
+  color: #fff;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+}
+
+.dev-actions { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+
+.dev-actions button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#dev-submit { background: var(--accent); color: #1a1208; }
+#dev-resume, #dev-cancel { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+#dev-status { font-size: 0.8rem; opacity: 0.85; }
+
+#studio-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  pointer-events: auto;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  z-index: 3;
+}
+
+#studio-toggle:hover { background: rgba(255, 255, 255, 0.22); }
+
+#studio-drawer {
+  position: absolute;
+  top: 3.25rem;
+  right: 1rem;
+  width: min(20rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 4.5rem);
+  overflow: auto;
+  pointer-events: auto;
+  color: #fff;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  z-index: 5;
+}
+
+#studio-drawer.hidden { display: none; }
+
+.studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.studio-header h2 {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#studio-close {
+  border: none;
+  border-radius: 8px;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.studio-section h3 {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 0.35rem;
+}
+
+.studio-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  margin-bottom: 0.3rem;
+}
+
+.studio-row input[type="range"] { width: 100%; }
+
+.studio-val {
+  font-size: 0.72rem;
+  opacity: 0.85;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+.studio-check {
+  grid-template-columns: 1fr auto;
+  margin-top: 0.25rem;
+}
+
+#studio-inspect {
+  font-size: 0.78rem;
+  opacity: 0.9;
+  line-height: 1.35;
+}
+
+.studio-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.studio-actions button,
+.studio-secondary {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.studio-secondary {
+  width: 100%;
+  margin-bottom: 0.35rem;
+}
+
+#studio-record-download:not(:disabled) { background: var(--accent); color: #1a1208; }
+
+#studio-record-status {
+  font-size: 0.75rem;
+  opacity: 0.85;
+  min-height: 1rem;
+}
+
+#dev-panel { top: 3.25rem; }
+
+#overlay h1 {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffe6b0;
+}
+
+#start-btn {
+  margin-top: 0.75rem;
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.75rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #1a1208;
+  background: linear-gradient(180deg, #ffd36a, var(--accent));
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@studio/three-render",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@studio/core": "0.1.0",
+    "@studio/physics": "0.1.0",
+    "three": "^0.178.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.178.0"
+  }
+}

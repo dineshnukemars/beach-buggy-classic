@@ -1,0 +1,22 @@
+{
+  "name": "@studio/scene-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5177 --host",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@studio/assets": "0.1.0",
+    "@studio/core": "0.1.0",
+    "@studio/physics": "0.1.0",
+    "@studio/three-render": "0.1.0",
+    "three": "^0.178.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.178.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4"
+  }
+}

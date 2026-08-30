@@ -1,19 +1,30 @@
 {
-  "name": "beach-buggy-classic",
+  "name": "browser-game-studio",
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "tools/*",
+    "games/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "three": "^0.178.0"
+    "dev": "npm run dev:game",
+    "dev:game": "npm run dev -w @studio/beach-buggy",
+    "dev:gltf": "npm run dev -w @studio/gltf-preview",
+    "dev:texture": "npm run dev -w @studio/texture-preview",
+    "dev:anim": "npm run dev -w @studio/animation-preview",
+    "dev:scene": "npm run dev -w @studio/scene-editor",
+    "setup": "bash scripts/setup-env.sh",
+    "test": "npm test --workspaces --if-present",
+    "test:pipeline": "npm run smoke -w @studio/pipeline-smoke",
+    "sim:probe": "npm run sim:probe -w @studio/physics",
+    "drive:probe": "npm run drive:probe -w @studio/physics",
+    "feedback:latest": "npm run latest -w @studio/feedback-cli -- --json",
+    "feedback:list": "npm run list -w @studio/feedback-cli -- --json"
   },
   "devDependencies": {
-    "@types/three": "^0.178.0",
-    "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "@gltf-transform/cli": "^4.2.1",
+    "typescript": "~5.8.3"
   }
 }
