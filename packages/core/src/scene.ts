@@ -10,6 +10,7 @@ export type TrackSpec = {
 export type EntityCollider = {
   type: 'box'
   halfExtents: Vec3Tuple
+  offset?: Vec3Tuple
 }
 
 export type SceneEntity = {
@@ -18,7 +19,13 @@ export type SceneEntity = {
   position: Vec3Tuple
   rotationY: number
   scale: number
+  opacity?: number
   collider?: EntityCollider
+}
+
+export type SceneLook = {
+  groundTextureId?: string
+  trackTextureId?: string
 }
 
 export type SceneDocument = {
@@ -26,6 +33,7 @@ export type SceneDocument = {
   id: string
   track?: TrackSpec
   entities: SceneEntity[]
+  look?: SceneLook
 }
 
 function isVec3Tuple(v: unknown): v is Vec3Tuple {
@@ -66,7 +74,21 @@ function parseEntity(raw: unknown, index: number): SceneEntity {
     if (c.halfExtents.some((n) => n <= 0)) {
       throw new Error(`entities[${index}].collider.halfExtents must be positive`)
     }
-    collider = { type: 'box', halfExtents: c.halfExtents }
+    let offset: Vec3Tuple | undefined
+    if (c.offset !== undefined) {
+      if (!isVec3Tuple(c.offset)) {
+        throw new Error(`entities[${index}].collider.offset must be [x,y,z]`)
+      }
+      offset = c.offset
+    }
+    collider = { type: 'box', halfExtents: c.halfExtents, ...(offset ? { offset } : {}) }
+  }
+  let opacity: number | undefined
+  if (e.opacity !== undefined) {
+    if (typeof e.opacity !== 'number' || !Number.isFinite(e.opacity) || e.opacity < 0 || e.opacity > 1) {
+      throw new Error(`entities[${index}].opacity must be in [0, 1]`)
+    }
+    opacity = e.opacity
   }
   return {
     id: e.id,
@@ -74,6 +96,7 @@ function parseEntity(raw: unknown, index: number): SceneEntity {
     position: e.position,
     rotationY: e.rotationY,
     scale: e.scale,
+    ...(opacity !== undefined ? { opacity } : {}),
     ...(collider ? { collider } : {}),
   }
 }
@@ -123,7 +146,32 @@ export function parseSceneDocument(raw: unknown): SceneDocument {
       ...(checkpoints ? { checkpoints } : {}),
     }
   }
-  return { version: 1, id: doc.id, ...(track ? { track } : {}), entities }
+  let look: SceneLook | undefined
+  if (doc.look !== undefined) {
+    if (typeof doc.look !== 'object' || !doc.look) throw new Error('look must be an object')
+    const l = doc.look as Record<string, unknown>
+    look = {}
+    if (l.groundTextureId !== undefined) {
+      if (typeof l.groundTextureId !== 'string' || !l.groundTextureId) {
+        throw new Error('look.groundTextureId must be a non-empty string')
+      }
+      look.groundTextureId = l.groundTextureId
+    }
+    if (l.trackTextureId !== undefined) {
+      if (typeof l.trackTextureId !== 'string' || !l.trackTextureId) {
+        throw new Error('look.trackTextureId must be a non-empty string')
+      }
+      look.trackTextureId = l.trackTextureId
+    }
+    if (!Object.keys(look).length) look = undefined
+  }
+  return {
+    version: 1,
+    id: doc.id,
+    ...(track ? { track } : {}),
+    ...(look ? { look } : {}),
+    entities,
+  }
 }
 
 export function emptyScene(id: string): SceneDocument {

@@ -89,6 +89,18 @@ test('flat sandbox stays on the plane under throttle', async () => {
   world.dispose()
 })
 
+test('debugRender exposes Rapier collider wireframe buffers', async () => {
+  await initPhysics()
+  const world = await World.create(1, { scene: createDefaultBeachScene(), backend: 'rapier' })
+  const buffers = world.debugRender()
+  assert.ok(buffers)
+  assert.ok(buffers!.vertices.length > 0)
+  assert.ok(buffers!.colors.length > 0)
+  const hubs = world.debugWheelHubs()
+  assert.equal(hubs.length, 4)
+  world.dispose()
+})
+
 test('teleport API resets motion state', async () => {
   await initPhysics()
   const scene = createDefaultBeachScene()

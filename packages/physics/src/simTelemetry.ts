@@ -10,6 +10,19 @@ export type WheelDebug = {
   contactPoint: Vec3 | null
 }
 
+export type WheelHubDebug = {
+  racerIndex: number
+  wheelIndex: number
+  position: Vec3
+  radius: number
+  contact: boolean
+}
+
+export type PhysicsDebugBuffers = {
+  vertices: Float32Array
+  colors: Float32Array
+}
+
 export type RacerDebug = {
   index: number
   position: Vec3

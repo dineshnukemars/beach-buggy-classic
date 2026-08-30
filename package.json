@@ -11,10 +11,6 @@
   "scripts": {
     "dev": "npm run dev:game",
     "dev:game": "npm run dev -w @studio/beach-buggy",
-    "dev:gltf": "npm run dev -w @studio/gltf-preview",
-    "dev:texture": "npm run dev -w @studio/texture-preview",
-    "dev:anim": "npm run dev -w @studio/animation-preview",
-    "dev:scene": "npm run dev -w @studio/scene-editor",
     "setup": "bash scripts/setup-env.sh",
     "test": "npm test --workspaces --if-present",
     "test:pipeline": "npm run smoke -w @studio/pipeline-smoke",

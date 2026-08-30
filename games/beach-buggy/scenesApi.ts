@@ -15,17 +15,13 @@ export function sanitizeSceneId(id: string): string {
   return trimmed
 }
 
-export function scenesApiPlugin(scenesRoot: string, gamePublicRoot: string): Plugin {
+export function scenesApiPlugin(scenesRoot: string): Plugin {
   return {
     name: 'studio-scenes-api',
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0] ?? ''
-        if (url.startsWith('/assets/') || url.startsWith('/scenes/')) {
-          void serveGamePublic(req, res, gamePublicRoot, url, next)
-          return
-        }
         if (!url.startsWith('/api/scenes')) {
           next()
           return
@@ -34,43 +30,6 @@ export function scenesApiPlugin(scenesRoot: string, gamePublicRoot: string): Plu
       })
     },
   }
-}
-
-async function serveGamePublic(
-  req: IncomingMessage,
-  res: ServerResponse,
-  root: string,
-  url: string,
-  next: () => void,
-): Promise<void> {
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    next()
-    return
-  }
-  const rel = decodeURIComponent(url.replace(/^\//, ''))
-  const file = path.resolve(root, rel)
-  if (!file.startsWith(path.resolve(root)) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-    next()
-    return
-  }
-  const ext = path.extname(file).toLowerCase()
-  const types: Record<string, string> = {
-    '.json': 'application/json',
-    '.gltf': 'model/gltf+json',
-    '.glb': 'model/gltf-binary',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.webp': 'image/webp',
-    '.bin': 'application/octet-stream',
-  }
-  res.statusCode = 200
-  res.setHeader('Content-Type', types[ext] ?? 'application/octet-stream')
-  if (req.method === 'HEAD') {
-    res.end()
-    return
-  }
-  fs.createReadStream(file).pipe(res)
 }
 
 async function handleScenesApi(

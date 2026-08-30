@@ -1,11 +1,15 @@
 export type AssetKind = 'gltf' | 'texture' | 'audio'
 
+export type Vec3Tuple = [number, number, number]
+
 export type AssetRef = {
   id: string
   kind: AssetKind
   path: string
   scale?: number
   wheelNodes?: string[]
+  visualOffset?: Vec3Tuple
+  visualRotationY?: number
 }
 
 export type AssetManifest = {

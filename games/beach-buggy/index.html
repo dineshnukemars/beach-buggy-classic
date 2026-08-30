@@ -18,7 +18,7 @@
         <div id="countdown"></div>
         <div id="message"></div>
         <div id="controls-hint">Arrows / WASD · Space boost · R restart · F8 report</div>
-        <button type="button" id="studio-toggle" aria-expanded="false">Dev</button>
+        <button type="button" id="studio-rails-toggle" aria-expanded="true">Hide studio</button>
       </div>
       <aside id="studio-drawer" class="hidden" aria-label="Studio settings">
         <header class="studio-header">
@@ -57,6 +57,10 @@
         </section>
         <section class="studio-section">
           <h3>Utilities</h3>
+          <label class="studio-row studio-check">
+            <span>Physics colliders</span>
+            <input type="checkbox" id="studio-physics-debug" />
+          </label>
           <div class="studio-actions">
             <button type="button" id="studio-pause">Pause physics</button>
             <button type="button" id="studio-reset">Reset settings</button>

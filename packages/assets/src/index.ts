@@ -25,10 +25,16 @@ export function loadTexture(path: string): Promise<THREE.Texture> {
   return texLoader.loadAsync(publicUrl(path))
 }
 
-export async function instantiateGltf(ref: AssetRef): Promise<THREE.Group> {
+export type GltfInstance = {
+  root: THREE.Group
+  clips: THREE.AnimationClip[]
+}
+
+export async function instantiateGltf(ref: AssetRef): Promise<GltfInstance> {
   const gltf = await loadGltf(ref.path)
   const root = gltf.scene.clone(true)
   const scale = ref.scale ?? 1
   root.scale.multiplyScalar(scale)
-  return root
+  const clips = gltf.animations.map((clip) => clip.clone())
+  return { root, clips }
 }

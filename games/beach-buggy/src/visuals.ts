@@ -1,6 +1,8 @@
 import type { EnvironmentGeneration } from '@studio/core'
 import type { TrackSample } from '@studio/physics'
 import { buildTrackRibbon, DEFAULT_HALF_WIDTH, ribbonToThreeGeometry } from '@studio/physics'
+import { loadTexture } from '@studio/assets'
+import { getAsset, type AssetManifest, type SceneLook } from '@studio/core'
 import { tagStudioRef } from '@studio/three-render'
 import * as THREE from 'three'
 
@@ -14,8 +16,33 @@ export const ENV_GENERATION: EnvironmentGeneration = {
 const GROUND_CELL = 8
 const GROUND_TILE = 2000
 
-export function createFlatGround(): THREE.Group {
+export async function createFlatGround(manifest: AssetManifest, look?: SceneLook): Promise<THREE.Group> {
   const group = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0, side: THREE.DoubleSide })
+  const texRef = look?.groundTextureId ? getAsset(manifest, look.groundTextureId) : undefined
+  if (texRef?.kind === 'texture') {
+    try {
+      const tex = await loadTexture(texRef.path)
+      tex.wrapS = THREE.RepeatWrapping
+      tex.wrapT = THREE.RepeatWrapping
+      tex.repeat.set(GROUND_TILE / GROUND_CELL, GROUND_TILE / GROUND_CELL)
+      tex.colorSpace = THREE.SRGBColorSpace
+      mat.map = tex
+    } catch {
+      applyCheckerFallback(mat)
+    }
+  } else {
+    applyCheckerFallback(mat)
+  }
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(GROUND_TILE, GROUND_TILE), mat)
+  ground.rotation.x = -Math.PI / 2
+  ground.receiveShadow = true
+  tagStudioRef(ground, { kind: 'environment', id: 'env:ground', label: 'Ground' })
+  group.add(ground)
+  return group
+}
+
+function applyCheckerFallback(mat: THREE.MeshStandardMaterial): void {
   const cells = 16
   const canvas = document.createElement('canvas')
   canvas.width = 512
@@ -33,15 +60,7 @@ export function createFlatGround(): THREE.Group {
   tex.wrapT = THREE.RepeatWrapping
   tex.repeat.set(GROUND_TILE / GROUND_CELL, GROUND_TILE / GROUND_CELL)
   tex.colorSpace = THREE.SRGBColorSpace
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(GROUND_TILE, GROUND_TILE),
-    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0, side: THREE.DoubleSide }),
-  )
-  ground.rotation.x = -Math.PI / 2
-  ground.receiveShadow = true
-  tagStudioRef(ground, { kind: 'environment', id: 'env:ground', label: 'Ground' })
-  group.add(ground)
-  return group
+  mat.map = tex
 }
 
 export function followFlatGround(ground: THREE.Object3D, pos: THREE.Vector3): void {
@@ -56,7 +75,22 @@ export function prepareImportedVehicle(root: THREE.Group): THREE.Group {
       obj.receiveShadow = true
     }
   })
-  return root
+
+  const bounds = new THREE.Box3().setFromObject(root)
+  const minY = bounds.min.y
+  const size = bounds.getSize(new THREE.Vector3())
+  const targetTrackWidth = 1.7
+  const scale = size.x > 0.01 ? Math.min(1.5, Math.max(0.5, targetTrackWidth / size.x)) : 1
+
+  const wrapper = new THREE.Group()
+  const visualPivot = new THREE.Group()
+  visualPivot.name = 'visualPivot'
+  visualPivot.userData.autoGroundY = -minY * scale
+  visualPivot.position.y = visualPivot.userData.autoGroundY as number
+  if (Math.abs(scale - 1) > 0.01) root.scale.setScalar(scale)
+  visualPivot.add(root)
+  wrapper.add(visualPivot)
+  return wrapper
 }
 
 export function createBuggyMesh(color: number): THREE.Group {
@@ -96,19 +130,32 @@ export function createBuggyMesh(color: number): THREE.Group {
   return buggy
 }
 
-export function createTrackMesh(
+export async function createTrackMesh(
   samples: TrackSample[],
   totalLength: number,
+  manifest: AssetManifest,
+  look?: SceneLook,
   halfWidth = DEFAULT_HALF_WIDTH,
   boostPads: number[] = [0.12, 0.37, 0.62, 0.87],
-): THREE.Group {
+): Promise<THREE.Group> {
   const group = new THREE.Group()
   tagStudioRef(group, { kind: 'track', id: 'track:road', label: 'Track' })
+  const roadMat = new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.9 })
+  const texRef = look?.trackTextureId ? getAsset(manifest, look.trackTextureId) : undefined
+  if (texRef?.kind === 'texture') {
+    try {
+      const tex = await loadTexture(texRef.path)
+      tex.wrapS = THREE.RepeatWrapping
+      tex.wrapT = THREE.RepeatWrapping
+      tex.repeat.set(4, 20)
+      tex.colorSpace = THREE.SRGBColorSpace
+      roadMat.map = tex
+    } catch {
+      /* keep default color */
+    }
+  }
   const ribbon = buildTrackRibbon(samples, totalLength, halfWidth, boostPads)
-  const road = new THREE.Mesh(
-    ribbonToThreeGeometry(ribbon),
-    new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.9 }),
-  )
+  const road = new THREE.Mesh(ribbonToThreeGeometry(ribbon), roadMat)
   road.receiveShadow = true
   tagStudioRef(road, { kind: 'track', id: 'track:road', label: 'Road' })
   group.add(road)
@@ -128,8 +175,9 @@ export function createTrackMesh(
     emissiveIntensity: 0.6,
   })
   ribbon.boostPads.forEach((pad, i) => {
-    const padMesh = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.08, 3.2), boostMat)
-    padMesh.position.copy(pad.position)
+    const padHalfY = 0.04
+    const padMesh = new THREE.Mesh(new THREE.BoxGeometry(4.5, padHalfY * 2, 3.2), boostMat)
+    padMesh.position.copy(pad.position).add(new THREE.Vector3(0, padHalfY, 0))
     padMesh.quaternion.setFromAxisAngle(
       new THREE.Vector3(0, 1, 0),
       Math.atan2(pad.tangent.x, pad.tangent.z),
@@ -140,12 +188,22 @@ export function createTrackMesh(
   return group
 }
 
-export function createEnvironment(): THREE.Group {
+export async function createEnvironment(manifest: AssetManifest, look?: SceneLook): Promise<THREE.Group> {
   const env = new THREE.Group()
-  const ground = new THREE.Mesh(
-    new THREE.CircleGeometry(180, 64),
-    new THREE.MeshStandardMaterial({ color: 0xb8954a, roughness: 1 }),
-  )
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0xb8954a, roughness: 1 })
+  const texRef = look?.groundTextureId ? getAsset(manifest, look.groundTextureId) : undefined
+  if (texRef?.kind === 'texture') {
+    try {
+      const tex = await loadTexture(texRef.path)
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+      tex.repeat.set(8, 8)
+      tex.colorSpace = THREE.SRGBColorSpace
+      groundMat.map = tex
+    } catch {
+      /* default sand color */
+    }
+  }
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(180, 64), groundMat)
   ground.rotation.x = -Math.PI / 2
   ground.position.y = -0.15
   ground.receiveShadow = true

@@ -38,11 +38,7 @@ echo "==> Running unit tests"
 npm test
 
 echo ""
-echo "Setup complete. Dev servers:"
-echo "  npm run dev:game     http://localhost:5173"
-echo "  npm run dev:gltf     http://localhost:5174"
-echo "  npm run dev:texture  http://localhost:5175"
-echo "  npm run dev:anim     http://localhost:5176"
-echo "  npm run dev:scene    http://localhost:5177"
+echo "Setup complete. Dev server:"
+echo "  npm run dev          http://localhost:5173 (game + unified studio rails)"
 echo ""
 echo "Optional: npm run test:pipeline"

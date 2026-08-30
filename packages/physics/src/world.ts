@@ -11,7 +11,7 @@ import {
   type TrackSample,
 } from './track'
 import { initialCheckpointIndex, checkpointProgresses, defaultCheckpointFractions } from './race'
-import type { RacerDebug, SimEvent, WheelDebug } from './simTelemetry'
+import type { PhysicsDebugBuffers, RacerDebug, SimEvent, WheelDebug, WheelHubDebug } from './simTelemetry'
 import { DEFAULT_VEHICLE_TUNING, type VehicleTuning } from './tuning'
 import { createVehicleState, stepVehicleArcade, type VehicleState } from './vehicle'
 
@@ -162,6 +162,14 @@ export class World {
 
   get simClock(): number {
     return this.simTime
+  }
+
+  debugRender(): PhysicsDebugBuffers | undefined {
+    return this.rapier?.debugRender()
+  }
+
+  debugWheelHubs(): WheelHubDebug[] {
+    return this.rapier?.debugWheelHubs() ?? []
   }
 
   debugRacer(index: number): RacerDebug | undefined {

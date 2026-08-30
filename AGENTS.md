@@ -22,10 +22,16 @@ Example fixture (committed): `tools/feedback-cli/fixtures/example/report.json`.
 
 ## How a human files a report
 
-1. `npm run dev` (game on http://localhost:5173).
-2. Start a race. Press **F8** (or `` ` ``). Lookback is frozen first, then physics pauses so you can click. Shift+F8 inspects without pausing.
+1. `npm run dev` (game + studio on http://localhost:5173).
+2. Switch to **Play**, start a race. Press **F8** (or `` ` ``). Lookback is frozen first, then physics pauses so you can click. Shift+F8 inspects without pausing.
 3. Click the object. Add tags (`jumpy`, `misaligned`, …) and a note. Submit.
 4. The Vite dev server writes `games/beach-buggy/feedback/{id}/`.
+
+## Dev studio (same port)
+
+`npm run dev` opens the unified studio: **Map** edits `public/scenes/*.json` via `/api/scenes`; **Assets** / **Texture** panels drag onto the live canvas; **Anim** plays glTF clips on selected entities. **Edit** mode uses orbit + gizmos on the game canvas (one WebGL context). **Play** rebuilds Rapier from the in-memory scene.
+
+Scenes save to `games/beach-buggy/public/scenes/`. Asset drops call `POST /api/assets` (wraps `@studio/import-cli`).
 
 ## Run the sim probe
 

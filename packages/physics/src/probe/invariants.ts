@@ -119,6 +119,19 @@ function launchStraight(result: ScenarioResult): Violation[] {
       ),
     )
   }
+  const minBodyY = ticks.reduce((min, t) => Math.min(min, t.position[1]), Infinity)
+  const floorY = -0.15
+  if (minBodyY < floorY) {
+    out.push(
+      fail(
+        result.name,
+        'bodyClearance',
+        minBodyY,
+        `Body Y min ${minBodyY.toFixed(2)} dropped below track floor ${floorY}.`,
+        HINT.stability,
+      ),
+    )
+  }
   out.push(...stability(result, ticks, { roll: 0.35, pitch: 0.35, airborne: 0.15 }))
   out.push(...unexpectedRecoveries(result, 0))
   return out

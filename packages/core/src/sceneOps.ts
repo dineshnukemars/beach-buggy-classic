@@ -1,6 +1,5 @@
-import type { SceneDocument, SceneEntity, Vec3Tuple } from '@studio/core'
-import { parseSceneDocument } from '@studio/core'
-import { createDefaultBeachScene } from '@studio/physics'
+import type { SceneDocument, SceneEntity, Vec3Tuple } from './scene'
+import { parseSceneDocument } from './scene'
 
 export type Selection =
   | { kind: 'point'; index: number }
@@ -11,10 +10,20 @@ export function cloneDoc(doc: SceneDocument): SceneDocument {
   return parseSceneDocument(JSON.parse(JSON.stringify(doc)))
 }
 
+const DEFAULT_TRACK = {
+  halfWidth: 7.5,
+  centerline: [
+    [0, 0, 0],
+    [40, 0, 0],
+    [40, 0, 40],
+    [0, 0, 40],
+  ] as Vec3Tuple[],
+  boostPads: [0.25, 0.75] as number[],
+}
+
 export function ensureTrack(doc: SceneDocument): SceneDocument {
   if (doc.track) return doc
-  const beach = createDefaultBeachScene()
-  return { ...doc, track: beach.track }
+  return { ...doc, track: { ...DEFAULT_TRACK, centerline: [...DEFAULT_TRACK.centerline] } }
 }
 
 export function setSceneId(doc: SceneDocument, id: string): SceneDocument {
@@ -76,4 +85,29 @@ export function createEntity(doc: SceneDocument, assetId: string, position: Vec3
     scale: 1,
     collider: { type: 'box', halfExtents: [0.5, 0.5, 0.5] },
   }
+}
+
+/** Entity-local collider offset rotated by rotationY and scaled for world placement. */
+export function rotatedColliderOffset(
+  offset: Vec3Tuple | undefined,
+  rotationY: number,
+  scale: number,
+): Vec3Tuple {
+  if (!offset) return [0, 0, 0]
+  const [ox, oy, oz] = offset
+  const cos = Math.cos(rotationY)
+  const sin = Math.sin(rotationY)
+  return [(ox * cos + oz * sin) * scale, oy * scale, (-ox * sin + oz * cos) * scale]
+}
+
+export function setGroundTexture(doc: SceneDocument, textureId: string | undefined): SceneDocument {
+  const look = { ...doc.look, groundTextureId: textureId }
+  if (!textureId) delete look.groundTextureId
+  return { ...doc, look: Object.keys(look).length ? look : undefined }
+}
+
+export function setTrackTexture(doc: SceneDocument, textureId: string | undefined): SceneDocument {
+  const look = { ...doc.look, trackTextureId: textureId }
+  if (!textureId) delete look.trackTextureId
+  return { ...doc, look: Object.keys(look).length ? look : undefined }
 }

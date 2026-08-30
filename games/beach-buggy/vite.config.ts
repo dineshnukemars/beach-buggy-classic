@@ -1,10 +1,16 @@
 import path from 'node:path'
 import { defineConfig } from 'vite'
 import { feedbackApiPlugin } from './feedbackApi.ts'
+import { scenesApiPlugin } from './scenesApi.ts'
+import { assetsApiPlugin } from './assetsApi.ts'
 
 export default defineConfig({
-  plugins: [feedbackApiPlugin(path.resolve(__dirname, 'feedback'))],
-  server: { port: 5173, host: true },
+  plugins: [
+    feedbackApiPlugin(path.resolve(__dirname, 'feedback')),
+    scenesApiPlugin(path.resolve(__dirname, 'public/scenes')),
+    assetsApiPlugin(__dirname),
+  ],
+  server: { port: 5173, host: true, strictPort: true },
   resolve: {
     alias: {
       '@studio/core': path.resolve(__dirname, '../../packages/core/src/index.ts'),

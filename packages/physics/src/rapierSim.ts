@@ -6,6 +6,7 @@ import RAPIER, {
   RigidBodyDesc,
 } from '@dimforge/rapier3d-compat'
 import type { InputFrame, SceneDocument } from '@studio/core'
+import { rotatedColliderOffset } from '@studio/core'
 import * as THREE from 'three'
 import { applyHandling, createHandlingState, type HandlingState } from './handling'
 import { advanceRaceState, checkpointProgresses, defaultCheckpointFractions, initialCheckpointIndex } from './race'
@@ -23,7 +24,14 @@ import {
   wheelConnectionY,
   type VehicleTuning,
 } from './tuning'
-import type { RacerDebug, RecoveryReason, SimEvent, WheelDebug } from './simTelemetry'
+import type {
+  PhysicsDebugBuffers,
+  RacerDebug,
+  RecoveryReason,
+  SimEvent,
+  WheelDebug,
+  WheelHubDebug,
+} from './simTelemetry'
 import { createVehicleState, syncDerivedMotion, type VehicleState } from './vehicle'
 
 export const FIXED_TIMESTEP = 1 / 60
@@ -141,8 +149,9 @@ export class RapierSimulation {
         const halfX = 2.25
         const halfY = 0.08
         const halfZ = 1.6
+        const chassisY = this.tuning.chassisOffset[1]
         const desc = ColliderDesc.cuboid(halfX, halfY, halfZ)
-          .setTranslation(pad.position.x, pad.position.y + halfY, pad.position.z)
+          .setTranslation(pad.position.x, pad.position.y + chassisY, pad.position.z)
           .setSensor(true)
           .setActiveEvents(ActiveEvents.COLLISION_EVENTS)
         const yaw = Math.atan2(pad.tangent.x, pad.tangent.z)
@@ -156,9 +165,10 @@ export class RapierSimulation {
       for (const entity of scene.entities) {
         if (!entity.collider) continue
         const [hx, hy, hz] = entity.collider.halfExtents
+        const [tx, ty, tz] = rotatedColliderOffset(entity.collider.offset, entity.rotationY, entity.scale)
         const desc = applyGroups(
           ColliderDesc.cuboid(hx * entity.scale, hy * entity.scale, hz * entity.scale)
-            .setTranslation(entity.position[0], entity.position[1], entity.position[2])
+            .setTranslation(entity.position[0] + tx, entity.position[1] + ty, entity.position[2] + tz)
             .setFriction(0.9),
           GROUP_PROP,
           GROUP_CHASSIS,
@@ -190,12 +200,13 @@ export class RapierSimulation {
     const body = this.world.createRigidBody(bodyDesc)
 
     const [hx, hy, hz] = this.tuning.chassisHalfExtents
+    const [cx, cy, cz] = this.tuning.chassisOffset
     const chassisFilter = this.flatGround
       ? GROUP_SAND | GROUP_PROP | GROUP_CHASSIS | GROUP_ROAD
       : GROUP_SAND | GROUP_PROP | GROUP_CHASSIS
     const chassisDesc = applyGroups(
       ColliderDesc.cuboid(hx, hy, hz)
-        .setTranslation(0, 0.55, 0)
+        .setTranslation(cx, cy, cz)
         .setMassProperties(
           this.tuning.mass,
           { x: 0, y: 0.28, z: 0 },
@@ -286,7 +297,12 @@ export class RapierSimulation {
         )
       }
 
-      const down = (4 + this.tuning.downforce * speed * 0.02) * dt
+      const boostCutoff = this.tuning.maxSpeed * 0.85
+      const downScale =
+        racer.handling.boostTimer > 0 && speed > boostCutoff
+          ? Math.max(0, 1 - (speed - boostCutoff) / (this.tuning.maxSpeed * 0.15))
+          : 1
+      const down = (4 + this.tuning.downforce * speed * 0.02) * dt * downScale
       const lv = racer.body.linvel()
       racer.body.setLinvel({ x: lv.x, y: lv.y - down, z: lv.z }, true)
       this.keepUpright(racer, dt)
@@ -448,6 +464,35 @@ export class RapierSimulation {
     this.teleportInternal(racer, position, rotation)
     this.syncRacer(racer)
     this.bodies[index] = racer.state
+  }
+
+  debugRender(): PhysicsDebugBuffers {
+    const buffers = this.world.debugRender()
+    return { vertices: buffers.vertices, colors: buffers.colors }
+  }
+
+  debugWheelHubs(): WheelHubDebug[] {
+    const hubs: WheelHubDebug[] = []
+    for (const racer of this.racers) {
+      const t = racer.body.translation()
+      const r = racer.body.rotation()
+      const quat = new THREE.Quaternion(r.x, r.y, r.z, r.w)
+      const bodyPos = new THREE.Vector3(t.x, t.y, t.z)
+      for (let i = 0; i < racer.controller.numWheels(); i++) {
+        const wheel = this.tuning.wheels[i]!
+        const hub = new THREE.Vector3(wheel.offsetX, wheelConnectionY(wheel), wheel.offsetZ)
+          .applyQuaternion(quat)
+          .add(bodyPos)
+        hubs.push({
+          racerIndex: racer.index,
+          wheelIndex: i,
+          position: [hub.x, hub.y, hub.z],
+          radius: wheel.radius,
+          contact: racer.controller.wheelIsInContact(i),
+        })
+      }
+    }
+    return hubs
   }
 
   debugRacer(index: number): RacerDebug | undefined {

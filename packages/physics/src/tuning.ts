@@ -9,6 +9,7 @@ export type WheelTuning = {
 export type VehicleTuning = {
   mass: number
   chassisHalfExtents: [number, number, number]
+  chassisOffset: [number, number, number]
   maxSpeed: number
   reverseSpeed: number
   engineForce: number
@@ -43,6 +44,7 @@ export function wheelConnectionY(wheel: WheelTuning): number {
 export const DEFAULT_VEHICLE_TUNING: VehicleTuning = {
   mass: 420,
   chassisHalfExtents: [0.65, 0.22, 1.0],
+  chassisOffset: [0, 0.55, 0],
   maxSpeed: 42,
   reverseSpeed: 12,
   engineForce: 2000,
@@ -78,6 +80,7 @@ export function parseVehicleTuning(raw: unknown): VehicleTuning {
     ...DEFAULT_VEHICLE_TUNING,
     ...src,
     chassisHalfExtents: src.chassisHalfExtents ?? DEFAULT_VEHICLE_TUNING.chassisHalfExtents,
+    chassisOffset: src.chassisOffset ?? DEFAULT_VEHICLE_TUNING.chassisOffset,
     wheels: src.wheels?.length === 4 ? src.wheels : DEFAULT_VEHICLE_TUNING.wheels,
   }
 }

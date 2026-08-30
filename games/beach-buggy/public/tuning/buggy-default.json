@@ -1,6 +1,7 @@
 {
   "mass": 420,
   "chassisHalfExtents": [0.65, 0.22, 1.0],
+  "chassisOffset": [0, 0.55, 0],
   "maxSpeed": 42,
   "reverseSpeed": 12,
   "engineForce": 2000,

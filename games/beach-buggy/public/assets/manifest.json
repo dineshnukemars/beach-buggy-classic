@@ -2,6 +2,13 @@
   "version": 1,
   "assets": [
     {
+      "id": "buggy",
+      "kind": "gltf",
+      "path": "assets/buggy.glb",
+      "scale": 1,
+      "visualOffset": [0, 0, 0]
+    },
+    {
       "id": "ci-cube",
       "kind": "gltf",
       "path": "assets/_ci/ci-cube.gltf",
@@ -11,12 +18,6 @@
       "id": "ci-sand",
       "kind": "texture",
       "path": "assets/_ci/ci-sand.png",
-      "scale": 1
-    },
-    {
-      "id": "buggy",
-      "kind": "gltf",
-      "path": "assets/buggy.glb",
       "scale": 1
     }
   ]

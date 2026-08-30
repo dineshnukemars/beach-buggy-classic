@@ -18,6 +18,185 @@ html, body, #app {
 
 #game { display: block; width: 100%; height: 100%; }
 
+.studio-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+  width: 100%;
+  height: 100%;
+}
+
+.studio-shell.studio-rails-hidden {
+  grid-template-columns: 0 1fr 0;
+}
+
+.studio-shell.studio-rails-hidden #studio-left,
+.studio-shell.studio-rails-hidden #studio-right {
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#studio-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#studio-left,
+#studio-right {
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 18, 28, 0.96);
+  border-color: rgba(255, 255, 255, 0.1);
+  border-style: solid;
+  color: #e8f0f8;
+  overflow: hidden;
+  pointer-events: auto;
+  z-index: 6;
+}
+
+#studio-left {
+  border-width: 0 1px 0 0;
+}
+
+#studio-right {
+  border-width: 0 0 0 1px;
+}
+
+.studio-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.studio-tab {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.studio-tab.active {
+  color: #1a1208;
+  background: linear-gradient(180deg, #ffd36a, var(--accent));
+}
+
+.studio-panel-body,
+.studio-right-tab {
+  flex: 1;
+  overflow: auto;
+  padding: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.studio-tab-panel.hidden,
+.studio-right-tab.hidden,
+.hidden { display: none !important; }
+
+.studio-section-inline h3,
+.studio-inspector-body h2,
+.studio-inspector-body h3 {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 0.35rem;
+}
+
+.studio-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  margin-bottom: 0.35rem;
+}
+
+.studio-field-col {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.studio-field input[type="text"],
+.studio-field input[type="number"],
+.studio-field textarea {
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(8, 16, 24, 0.7);
+  color: #fff;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+}
+
+.studio-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.studio-chips .chip,
+.studio-actions button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.studio-chips .chip.active,
+.studio-actions button.active {
+  background: var(--accent);
+  color: #1a1208;
+}
+
+.studio-chips .chip.draggable { cursor: grab; }
+
+.studio-status { font-size: 0.78rem; min-height: 1rem; }
+.studio-status.ok { color: #7dffb2; }
+.studio-status.err { color: #ff8a80; }
+.studio-note { font-size: 0.75rem; opacity: 0.8; line-height: 1.35; }
+
+#studio-tune-mount #studio-drawer {
+  position: static;
+  width: 100%;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
+#studio-rails-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  pointer-events: auto;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  z-index: 3;
+}
+
+.studio-shell #studio-rails-toggle { display: inline-block; }
+
 #hud {
   position: absolute;
   inset: 0;
@@ -156,24 +335,7 @@ html, body, #app {
 
 #dev-status { font-size: 0.8rem; opacity: 0.85; }
 
-#studio-toggle {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  pointer-events: auto;
-  border: none;
-  border-radius: 999px;
-  padding: 0.45rem 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  z-index: 3;
-}
-
-#studio-toggle:hover { background: rgba(255, 255, 255, 0.22); }
+#studio-rails-toggle:hover { background: rgba(255, 255, 255, 0.22); }
 
 #studio-drawer {
   position: absolute;

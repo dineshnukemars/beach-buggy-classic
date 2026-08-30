@@ -14,9 +14,27 @@ export {
   type EntityCollider,
   type SceneDocument,
   type SceneEntity,
+  type SceneLook,
   type TrackSpec,
   type Vec3Tuple,
 } from './scene'
+export {
+  cloneDoc,
+  createEntity,
+  ensureTrack,
+  insertCenterlinePoint,
+  nextEntityId,
+  removeCenterlinePoint,
+  removeEntity,
+  rotatedColliderOffset,
+  setCenterlinePoint,
+  setGroundTexture,
+  setHalfWidth,
+  setSceneId,
+  setTrackTexture,
+  upsertEntity,
+  type Selection,
+} from './sceneOps'
 export {
   isStudioRefKind,
   parseStudioRef,

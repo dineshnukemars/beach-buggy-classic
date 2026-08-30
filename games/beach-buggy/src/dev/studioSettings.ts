@@ -12,7 +12,13 @@ export type StudioSettings = {
   sunAzimuth: number
   sunElevation: number
   shadows: boolean
+  showPhysicsDebug: boolean
   maxSpeed: number
+  playerMeshOpacity: number
+  visualOffsetX: number
+  visualOffsetY: number
+  visualOffsetZ: number
+  chassisOffsetY: number
 }
 
 /** Defaults match hardcodes in main.ts before studio wiring. */
@@ -26,7 +32,13 @@ export const DEFAULT_STUDIO_SETTINGS: StudioSettings = {
   sunAzimuth: 63.4,
   sunElevation: 53.1,
   shadows: true,
+  showPhysicsDebug: false,
   maxSpeed: 42,
+  playerMeshOpacity: 1,
+  visualOffsetX: 0,
+  visualOffsetY: 0,
+  visualOffsetZ: 0,
+  chassisOffsetY: 0.55,
 }
 
 const SUN_DISTANCE = Math.hypot(40, 60, 20)
@@ -41,10 +53,11 @@ export function sunPositionFromSettings(s: StudioSettings): THREE.Vector3 {
   )
 }
 
-export function loadStudioSettings(tuningMaxSpeed?: number): StudioSettings {
+export function loadStudioSettings(tuningMaxSpeed?: number, chassisOffsetY?: number): StudioSettings {
   const defaults: StudioSettings = {
     ...DEFAULT_STUDIO_SETTINGS,
     maxSpeed: tuningMaxSpeed ?? DEFAULT_STUDIO_SETTINGS.maxSpeed,
+    chassisOffsetY: chassisOffsetY ?? DEFAULT_STUDIO_SETTINGS.chassisOffsetY,
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -64,10 +77,11 @@ export function saveStudioSettings(settings: StudioSettings): void {
   }
 }
 
-export function resetStudioSettings(tuningMaxSpeed?: number): StudioSettings {
+export function resetStudioSettings(tuningMaxSpeed?: number, chassisOffsetY?: number): StudioSettings {
   const settings = {
     ...DEFAULT_STUDIO_SETTINGS,
     maxSpeed: tuningMaxSpeed ?? DEFAULT_STUDIO_SETTINGS.maxSpeed,
+    chassisOffsetY: chassisOffsetY ?? DEFAULT_STUDIO_SETTINGS.chassisOffsetY,
   }
   saveStudioSettings(settings)
   return settings

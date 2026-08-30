@@ -2,7 +2,9 @@ import {
   computeAgentHints,
   makeFeedbackId,
   serializePoseHistory,
+  upsertAsset,
   type FeedbackReport,
+  type Vec3Tuple,
 } from '@studio/core'
 import type { VehicleTuning, World } from '@studio/physics'
 import * as THREE from 'three'
@@ -27,12 +29,19 @@ export type StudioDrawerHost = {
   renderer: THREE.WebGLRenderer
   canvas: HTMLCanvasElement
   defaultMaxSpeed: number
+  defaultChassisOffsetY: number
   getTuning: () => VehicleTuning
   getWorld: () => World | undefined
   getPhase: () => string
   getSceneDoc: () => { id: string }
   getScenePath: () => string
+  getMode: () => 'edit' | 'play'
+  isSimPaused: () => boolean
+  getManifest: () => import('@studio/core').AssetManifest
+  setManifest: (manifest: import('@studio/core').AssetManifest) => void
+  applyPlayerVehicleVisual: () => void
   lookback: LookbackBuffer
+  setPhysicsDebug?: (on: boolean) => void
 }
 
 type SliderSpec = {
@@ -58,21 +67,39 @@ const LIGHT_SLIDERS: SliderSpec[] = [
   { key: 'sunElevation', label: 'Sun elevation', min: 5, max: 89, step: 1, format: (v) => `${Math.round(v)}°` },
 ]
 
+const VEHICLE_SLIDERS: SliderSpec[] = [
+  {
+    key: 'playerMeshOpacity',
+    label: 'Mesh opacity',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
+  { key: 'visualOffsetX', label: 'Visual offset X', min: -1, max: 1, step: 0.01 },
+  { key: 'visualOffsetY', label: 'Visual offset Y', min: -1, max: 1, step: 0.01 },
+  { key: 'visualOffsetZ', label: 'Visual offset Z', min: -1, max: 1, step: 0.01 },
+  { key: 'chassisOffsetY', label: 'Chassis offset Y', min: 0, max: 1.5, step: 0.01 },
+]
+
 export function createStudioDrawer(host: StudioDrawerHost) {
-  const toggle = document.querySelector<HTMLButtonElement>('#studio-toggle')!
+  const toggle = document.querySelector<HTMLButtonElement>('#studio-toggle')
   const drawer = document.querySelector<HTMLElement>('#studio-drawer')!
-  const closeBtn = document.querySelector<HTMLButtonElement>('#studio-close')!
+  const embedded = Boolean(document.querySelector('#studio-tune-mount'))
+  const closeBtn = document.querySelector<HTMLButtonElement>('#studio-close')
   const inspectEl = document.querySelector<HTMLElement>('#studio-inspect')!
   const pauseBtn = document.querySelector<HTMLButtonElement>('#studio-pause')!
   const resetBtn = document.querySelector<HTMLButtonElement>('#studio-reset')!
   const shadowsInput = document.querySelector<HTMLInputElement>('#studio-shadows')!
+  const physicsDebugInput = document.querySelector<HTMLInputElement>('#studio-physics-debug')!
   const recordStart = document.querySelector<HTMLButtonElement>('#studio-record-start')!
   const recordStop = document.querySelector<HTMLButtonElement>('#studio-record-stop')!
   const recordDownload = document.querySelector<HTMLButtonElement>('#studio-record-download')!
   const saveClipBtn = document.querySelector<HTMLButtonElement>('#studio-save-clip')!
   const recordStatus = document.querySelector<HTMLElement>('#studio-record-status')!
+  const vehicleNote = document.querySelector<HTMLElement>('#studio-vehicle-note')
 
-  let settings = loadStudioSettings(host.defaultMaxSpeed)
+  let settings = loadStudioSettings(host.defaultMaxSpeed, host.defaultChassisOffsetY)
   let open = false
   let paused = false
   let recorder: MediaRecorder | undefined
@@ -83,7 +110,7 @@ export function createStudioDrawer(host: StudioDrawerHost) {
   const sliderEls = new Map<keyof StudioSettings, HTMLInputElement>()
   const valueEls = new Map<keyof StudioSettings, HTMLElement>()
 
-  function bindSlider(section: HTMLElement, spec: SliderSpec): void {
+  function bindSlider(section: HTMLElement, spec: SliderSpec, onInput?: () => void): void {
     const row = document.createElement('label')
     row.className = 'studio-row'
     const name = document.createElement('span')
@@ -94,20 +121,30 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     input.max = String(spec.max)
     input.step = String(spec.step)
     input.value = String(settings[spec.key])
+    input.dataset.vehicleTune = VEHICLE_SLIDERS.some((s) => s.key === spec.key) ? '1' : '0'
     const val = document.createElement('span')
     val.className = 'studio-val'
     val.textContent = spec.format ? spec.format(settings[spec.key] as number) : String(settings[spec.key])
     input.addEventListener('input', () => {
+      if (input.disabled) return
       const num = Number(input.value)
       settings = { ...settings, [spec.key]: num }
       val.textContent = spec.format ? spec.format(num) : String(num)
       applySettings()
       saveStudioSettings(settings)
+      onInput?.()
     })
     row.append(name, input, val)
     section.append(row)
     sliderEls.set(spec.key, input)
     valueEls.set(spec.key, val)
+  }
+
+  function applyVehicleManifestOffset(): void {
+    const offset: Vec3Tuple = [settings.visualOffsetX, settings.visualOffsetY, settings.visualOffsetZ]
+    const buggy = host.getManifest().assets.find((a) => a.id === 'buggy')
+    if (!buggy) return
+    host.setManifest(upsertAsset(host.getManifest(), { ...buggy, visualOffset: offset }))
   }
 
   function bindSections(): void {
@@ -124,6 +161,38 @@ export function createStudioDrawer(host: StudioDrawerHost) {
       step: 1,
       format: (v) => `${Math.round(v)} m/s`,
     })
+    const vehicleSection = document.querySelector<HTMLElement>('#studio-vehicle')
+    if (vehicleSection) {
+      for (const spec of VEHICLE_SLIDERS) {
+        bindSlider(vehicleSection, spec, () => {
+          if (spec.key.startsWith('visualOffset')) {
+            applyVehicleManifestOffset()
+            host.applyPlayerVehicleVisual()
+          } else if (spec.key === 'playerMeshOpacity') {
+            host.applyPlayerVehicleVisual()
+          } else if (spec.key === 'chassisOffsetY') {
+            host.getTuning().chassisOffset = [0, settings.chassisOffsetY, 0]
+          }
+        })
+      }
+    }
+  }
+
+  function vehicleTuneEnabled(): boolean {
+    return host.getMode() === 'edit' || host.isSimPaused()
+  }
+
+  function syncVehicleTuneGate(): void {
+    const enabled = vehicleTuneEnabled()
+    for (const [key, input] of sliderEls) {
+      if (!VEHICLE_SLIDERS.some((s) => s.key === key)) continue
+      input.disabled = !enabled
+    }
+    if (vehicleNote) {
+      vehicleNote.textContent = enabled
+        ? 'Chassis offset Y needs Apply physics / switch to Play.'
+        : 'Edit mode or pause physics to tune.'
+    }
   }
 
   function syncSliders(): void {
@@ -131,12 +200,16 @@ export function createStudioDrawer(host: StudioDrawerHost) {
       input.value = String(settings[key])
       const valEl = valueEls.get(key)
       if (!valEl) continue
-      const spec = [...CAMERA_SLIDERS, ...LIGHT_SLIDERS, { key: 'maxSpeed' as const, format: (v: number) => `${Math.round(v)} m/s` }].find(
-        (s) => s.key === key,
-      )
+      const spec = [
+        ...CAMERA_SLIDERS,
+        ...LIGHT_SLIDERS,
+        ...VEHICLE_SLIDERS,
+        { key: 'maxSpeed' as const, format: (v: number) => `${Math.round(v)} m/s` },
+      ].find((s) => s.key === key)
       valEl.textContent = spec?.format ? spec.format(settings[key] as number) : String(settings[key])
     }
     shadowsInput.checked = settings.shadows
+    physicsDebugInput.checked = settings.showPhysicsDebug
   }
 
   function applySettings(): void {
@@ -148,18 +221,22 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     host.renderer.shadowMap.enabled = settings.shadows
     host.sun.castShadow = settings.shadows
     host.getTuning().maxSpeed = settings.maxSpeed
+    host.getTuning().chassisOffset = [0, settings.chassisOffsetY, 0]
+    host.setPhysicsDebug?.(settings.showPhysicsDebug)
+    syncVehicleTuneGate()
   }
 
   function setOpen(next: boolean): void {
     open = next
-    drawer.classList.toggle('hidden', !open)
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+    if (!embedded) drawer.classList.toggle('hidden', !open)
+    toggle?.setAttribute('aria-expanded', open ? 'true' : 'false')
   }
 
   function setPaused(next: boolean): void {
     paused = next
     pauseBtn.textContent = paused ? 'Resume physics' : 'Pause physics'
     pauseBtn.setAttribute('aria-pressed', paused ? 'true' : 'false')
+    syncVehicleTuneGate()
   }
 
   function updateInspect(): void {
@@ -298,17 +375,24 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     }
   }
 
-  toggle.addEventListener('click', () => setOpen(!open))
-  closeBtn.addEventListener('click', () => setOpen(false))
+  toggle?.addEventListener('click', () => setOpen(!open))
+  closeBtn?.addEventListener('click', () => setOpen(false))
   pauseBtn.addEventListener('click', () => setPaused(!paused))
   resetBtn.addEventListener('click', () => {
-    settings = resetStudioSettings(host.defaultMaxSpeed)
+    settings = resetStudioSettings(host.defaultMaxSpeed, host.defaultChassisOffsetY)
     syncSliders()
     applySettings()
+    applyVehicleManifestOffset()
+    host.applyPlayerVehicleVisual()
     setRecordStatus('Settings reset')
   })
   shadowsInput.addEventListener('change', () => {
     settings.shadows = shadowsInput.checked
+    applySettings()
+    saveStudioSettings(settings)
+  })
+  physicsDebugInput.addEventListener('change', () => {
+    settings.showPhysicsDebug = physicsDebugInput.checked
     applySettings()
     saveStudioSettings(settings)
   })
@@ -320,8 +404,11 @@ export function createStudioDrawer(host: StudioDrawerHost) {
   bindSections()
   syncSliders()
   applySettings()
+  applyVehicleManifestOffset()
+  host.applyPlayerVehicleVisual()
   recordStop.disabled = true
   recordDownload.disabled = true
+  if (embedded) setOpen(true)
 
   return {
     getSettings: () => settings,
@@ -329,6 +416,7 @@ export function createStudioDrawer(host: StudioDrawerHost) {
     isPaused: () => paused,
     isTyping: () => isPanelField(document.activeElement),
     updateInspect,
+    syncVehicleTuneGate,
     dispose: () => {
       if (recorder?.state === 'recording') recorder.stop()
     },

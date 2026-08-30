@@ -47,7 +47,7 @@ export function buildTrackRibbon(
     const sample = sampleAtProgress(samples, totalLength, frac * totalLength)
     return {
       progress: frac,
-      position: sample.position.clone().add(new THREE.Vector3(0, yOffset + 0.03, 0)),
+      position: sample.position.clone().add(new THREE.Vector3(0, yOffset, 0)),
       tangent: sample.tangent.clone(),
       binormal: sample.binormal.clone(),
     }
