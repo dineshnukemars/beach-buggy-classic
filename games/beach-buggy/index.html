@@ -18,7 +18,51 @@
         <div id="countdown"></div>
         <div id="message"></div>
         <div id="controls-hint">Arrows / WASD · Space boost · R restart · F8 report</div>
+        <button type="button" id="studio-toggle" aria-expanded="false">Dev</button>
       </div>
+      <aside id="studio-drawer" class="hidden" aria-label="Studio settings">
+        <header class="studio-header">
+          <h2>Dev</h2>
+          <button type="button" id="studio-close" aria-label="Close">×</button>
+        </header>
+        <section class="studio-section">
+          <h3>Camera</h3>
+          <div id="studio-camera"></div>
+        </section>
+        <section class="studio-section">
+          <h3>Lighting</h3>
+          <div id="studio-lighting"></div>
+          <label class="studio-row studio-check">
+            <span>Shadows</span>
+            <input type="checkbox" id="studio-shadows" checked />
+          </label>
+        </section>
+        <section class="studio-section">
+          <h3>Handling</h3>
+          <div id="studio-handling"></div>
+        </section>
+        <section class="studio-section">
+          <h3>Inspect</h3>
+          <p id="studio-inspect">—</p>
+        </section>
+        <section class="studio-section">
+          <h3>Recording</h3>
+          <div class="studio-actions">
+            <button type="button" id="studio-record-start">Start</button>
+            <button type="button" id="studio-record-stop">Stop</button>
+            <button type="button" id="studio-record-download">Download</button>
+          </div>
+          <button type="button" id="studio-save-clip" class="studio-secondary">Save inspect clip</button>
+          <p id="studio-record-status"></p>
+        </section>
+        <section class="studio-section">
+          <h3>Utilities</h3>
+          <div class="studio-actions">
+            <button type="button" id="studio-pause">Pause physics</button>
+            <button type="button" id="studio-reset">Reset settings</button>
+          </div>
+        </section>
+      </aside>
       <aside id="dev-panel" class="hidden" aria-label="Feedback report">
         <h2>Report</h2>
         <p id="dev-target">Click an object</p>

@@ -8,6 +8,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@studio/assets": "0.1.0",
     "@studio/core": "0.1.0",
     "@studio/physics": "0.1.0",
     "@studio/three-render": "0.1.0",

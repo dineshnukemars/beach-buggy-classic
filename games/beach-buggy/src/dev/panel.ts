@@ -58,5 +58,7 @@ export function resetPanel(panel: PanelElements): void {
 }
 
 export function isPanelField(el: EventTarget | null): boolean {
+  if (!(el instanceof Element)) return false
+  if (el.closest('#studio-drawer')) return true
   return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement
 }

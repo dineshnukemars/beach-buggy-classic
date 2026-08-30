@@ -156,6 +156,142 @@ html, body, #app {
 
 #dev-status { font-size: 0.8rem; opacity: 0.85; }
 
+#studio-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  pointer-events: auto;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  z-index: 3;
+}
+
+#studio-toggle:hover { background: rgba(255, 255, 255, 0.22); }
+
+#studio-drawer {
+  position: absolute;
+  top: 3.25rem;
+  right: 1rem;
+  width: min(20rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 4.5rem);
+  overflow: auto;
+  pointer-events: auto;
+  color: #fff;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  z-index: 5;
+}
+
+#studio-drawer.hidden { display: none; }
+
+.studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.studio-header h2 {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#studio-close {
+  border: none;
+  border-radius: 8px;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.studio-section h3 {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 0.35rem;
+}
+
+.studio-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  margin-bottom: 0.3rem;
+}
+
+.studio-row input[type="range"] { width: 100%; }
+
+.studio-val {
+  font-size: 0.72rem;
+  opacity: 0.85;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+.studio-check {
+  grid-template-columns: 1fr auto;
+  margin-top: 0.25rem;
+}
+
+#studio-inspect {
+  font-size: 0.78rem;
+  opacity: 0.9;
+  line-height: 1.35;
+}
+
+.studio-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.studio-actions button,
+.studio-secondary {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.studio-secondary {
+  width: 100%;
+  margin-bottom: 0.35rem;
+}
+
+#studio-record-download:not(:disabled) { background: var(--accent); color: #1a1208; }
+
+#studio-record-status {
+  font-size: 0.75rem;
+  opacity: 0.85;
+  min-height: 1rem;
+}
+
+#dev-panel { top: 3.25rem; }
+
 #overlay h1 {
   font-size: clamp(2rem, 6vw, 3.5rem);
   font-weight: 800;

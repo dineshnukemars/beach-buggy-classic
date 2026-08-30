@@ -11,6 +11,7 @@ export {
 export {
   emptyScene,
   parseSceneDocument,
+  type EntityCollider,
   type SceneDocument,
   type SceneEntity,
   type TrackSpec,

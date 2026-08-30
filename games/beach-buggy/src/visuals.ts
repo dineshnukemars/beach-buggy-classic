@@ -49,6 +49,16 @@ export function followFlatGround(ground: THREE.Object3D, pos: THREE.Vector3): vo
   ground.position.z = Math.round(pos.z / GROUND_CELL) * GROUND_CELL
 }
 
+export function prepareImportedVehicle(root: THREE.Group): THREE.Group {
+  root.traverse((obj) => {
+    if (obj instanceof THREE.Mesh) {
+      obj.castShadow = true
+      obj.receiveShadow = true
+    }
+  })
+  return root
+}
+
 export function createBuggyMesh(color: number): THREE.Group {
   const buggy = new THREE.Group()
   const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.15 })

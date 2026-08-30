@@ -12,6 +12,12 @@
       "kind": "texture",
       "path": "assets/_ci/ci-sand.png",
       "scale": 1
+    },
+    {
+      "id": "buggy",
+      "kind": "gltf",
+      "path": "assets/buggy.glb",
+      "scale": 1
     }
   ]
 }
